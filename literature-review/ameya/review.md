@@ -1,6 +1,6 @@
 # Ameya — Literature Review for the Causal Uplift Engine
 
-## Scope and overlap audit
+## Scope
 
 The papers below were selected from 2023–2025 and focus on practical issues for the project: uplift estimation, heterogeneous treatment effects, imbalance, confounding, uncertainty, constraints, and treatment-allocation decisions.
 
