@@ -1,44 +1,33 @@
-# Literature Review: Ameya
+# Ameya — Literature Review for the Causal Uplift Engine
 
-**Role:** <your role> · **Linear issue:** CUE-<n>
+## Scope and overlap audit
 
-## 1. Paper notes
+The papers below were selected from 2023–2025 and focus on practical issues for the project: uplift estimation, heterogeneous treatment effects, imbalance, confounding, uncertainty, constraints, and treatment-allocation decisions.
 
-Copy this block once per paper. Core papers first, then your role's papers, then any new ones you find.
+## Unique papers
 
----
+| # | Paper and year | Main contribution | 3–4 line summary | How it can be used in the Causal Uplift Engine |
+|---|---|---|---|---|
+| 1 | **Do-PFN: Causal Inference with Tabular Foundation Models** — Balazadeh et al. (2025)  [Paper](https://arxiv.org/abs/2506.06039) | Tabular foundation model for causal effect estimation | Do-PFN adapts pretrained tabular modeling ideas to estimate causal quantities from heterogeneous tabular data. It is designed to handle nonlinear relationships and mixed feature types while producing treatment-effect estimates. The work is relevant to rapid model comparison on small or medium-sized datasets. | Add it as an optional advanced baseline beside S-, T-, X-, and R-learners. Compare its CATE/uplift estimates with the existing models on Hillstrom and Criteo, then evaluate whether it improves AUUC, Qini, policy value, and calibration. |
+| 2 | **Causal Machine Learning for Predicting Treatment Outcomes** — Feuerriegel et al. (2024)  [Paper](https://doi.org/10.1038/s41591-024-02902-1) | Practical framework for causal ML and treatment-effect prediction | This paper explains how causal machine learning can estimate individualized treatment effects and support treatment decisions. It emphasizes the difference between prediction and causal estimation, including assumptions, model selection, validation, and interpretability. It provides a useful bridge between statistical causal inference and deployable ML systems. | Use it to structure the project’s methodology and assumptions sections. It can guide the comparison of meta-learners, doubly robust estimators, validation metrics, and the distinction between predicting response and predicting incremental response. |
+| 3 | **Uplift Modeling with Continuous Treatments: A Predict-Then-Optimize Approach** — De Vos et al. (2024)  [Paper](https://arxiv.org/abs/2412.09232) | Uplift estimation when treatment is a dose or continuous action | The paper extends uplift modeling beyond binary treatment. It estimates conditional average dose responses and then solves a constrained allocation problem, including budget and fairness constraints. The predict-then-optimize design separates effect estimation from the final policy decision. | Extend the engine later from “contact/no contact” to campaign intensity, discount amount, number of messages, or treatment dose. The optimization stage can support budget-aware targeting instead of ranking customers only by predicted uplift. |
+| 4 | **Class Flipping for Uplift Modeling and Heterogeneous Treatment Effect Estimation on Imbalanced RCT Data** — Rudaś & Jaroszewicz (2024)  [Paper](https://arxiv.org/abs/2412.10009) | Treatment/class imbalance correction without distorting uplift | This work addresses severe treatment and outcome imbalance in randomized experiments. It proposes class flipping as an alternative to ordinary over- or undersampling, which can distort the estimated treatment effect. The authors show that the approach is especially useful for transformed-outcome uplift models. | Use it in the imbalance experiment for the Hillstrom and Criteo datasets. Implement it as a preprocessing option, then compare it with class weights, stratified sampling, and ordinary resampling using Qini/AUUC and treatment-group calibration. |
+| 5 | **The Impact of Heteroskedasticity on Uplift Modeling** — Bokelmann & Lessmann (2023)  [Paper](https://arxiv.org/abs/2312.05234) | Ranking bias caused by unequal outcome variance | The paper shows that heteroskedasticity can reverse the expected quality of an uplift ranking. Individuals with high treatment effects may be pushed toward the bottom when the variance changes across groups or covariate regions. It combines theoretical analysis with simulations and real data. | Add variance diagnostics and subgroup analysis to the evaluation pipeline. Check whether high-variance customer segments receive systematically poor ranks, and report variance-aware failure cases rather than relying on a single global AUUC or Qini score. |
+| 6 | **Propensity Score Oversampling and Matching for Uplift Modeling** — Vairetti, Gennaro & Maldonado (2024)  [Paper](https://doi.org/10.1016/j.ejor.2024.03.024) | Resampling and matching for confounded or imbalanced uplift data | The paper proposes propensity score oversampling and matching (ProSOM). It combines treatment-aware oversampling with propensity-score matching to improve comparability between treated and untreated observations. The approach targets small or imbalanced datasets and evaluates the resulting uplift models on benchmark data. | Use ProSOM as an observational-data robustness baseline. Add propensity-score diagnostics, overlap checks, and balance tables before and after preprocessing; this will make the engine safer when randomized treatment is unavailable. |
+| 7 | **Partial Counterfactual Identification and Uplift Modeling: Theoretical Results and Real-World Assessment** — Verhelst et al. (2024)  [Paper](https://doi.org/10.1007/s10994-023-06317-w) | Bounds on counterfactual probabilities from uplift estimates | This paper studies counterfactual statements that are more detailed than an average treatment effect. It derives bounds and a point estimator under a conditional-independence assumption, then evaluates them with simulated and customer data. The work highlights uncertainty that remains even when an uplift estimate is available. | Use the paper to expand the engine beyond point CATE predictions. Report uncertainty or bounds for selected segments, document assumptions, and avoid presenting a customer’s predicted uplift as a directly observed individual causal effect. |
+| 8 | **Uplift Modeling Under Limited Supervision** — Panagopoulos et al. (2024)  [Paper](https://arxiv.org/abs/2403.19289) | Learning uplift when treatment labels or outcomes are incomplete | This work considers settings where supervision is limited, such as partially observed treatment assignments or incomplete outcome information. It develops methods for learning useful treatment-effect signals despite missing information. The problem is important when production data are less clean than an RCT benchmark. | Use it as a roadmap for missing-treatment and delayed-outcome extensions. Add missingness checks to the data pipeline, compare complete-case and weakly supervised training, and document which records are eligible for causal evaluation. |
+| 9 | **TERRA: A Transformer-Enabled Recursive R-Learner for Longitudinal HTE Estimation** — Shi et al. (2025)  [Paper](https://arxiv.org/abs/2510.22407) | Longitudinal heterogeneous treatment-effect estimation | TERRA combines transformer representations with an R-learner-style residualization strategy for repeated or longitudinal observations. The transformer captures temporal dependencies while the causal objective separates treatment and outcome variation. It is designed for settings where treatment effects evolve over time. | Use it if the engine is extended to repeated campaigns or customer histories. Represent a customer’s sequence of interactions, include time-aware splits, and compare static uplift models against longitudinal CATE estimates. |
+| 10 | **Guardrailed Uplift Targeting: A Causal Optimization Playbook for Marketing Strategy** — Sapru (2025)  [Paper](https://arxiv.org/abs/2512.19805) | Constrained and guardrailed uplift targeting | This paper frames uplift targeting as a policy-optimization problem rather than only a prediction task. It emphasizes guardrails such as budget, fairness, contact fatigue, risk, and business constraints. The approach is closely aligned with deploying uplift scores into a real marketing decision process. | Use it to design the project’s policy layer. After estimating uplift, apply contact-cap, budget, suppression, fairness, and minimum-benefit constraints; report policy value and guardrail violations in addition to model metrics. |
 
-### <ID> <Short title> (<first author>, <year>)
+## Recommended implementation sequence
 
-- **Link:**
-- **Problem:** what question does the paper answer? (1–2 sentences)
-- **Method:** how does it work? (3–5 sentences, in your own words)
-- **Data:** which datasets, how large?
-- **Results:** key numbers. Copy the exact metric and table number.
-- **Limitations:** stated by the authors, and any you see.
-- **Relevance to us:** which of our models (Baseline, M1a, M1b, M2–M4) or pipeline step it affects, and how.
-- **Open questions:**
+1. Establish leakage-safe baselines with S-, T-, X-, and R-learners on Hillstrom and Criteo.
+2. Add imbalance and confounding experiments using class flipping and propensity-score matching/oversampling.
+3. Add variance, overlap, and uncertainty diagnostics so that rankings are not treated as automatically reliable.
+4. Add a policy optimizer with budget and contact-frequency constraints, following the predict-then-optimize and guardrailed-targeting ideas.
+5. Treat Do-PFN and TERRA as advanced extensions after the baseline pipeline is stable. Use TERRA only when longitudinal customer histories are available.
 
----
+## Project-level research gap
 
-## 2. New papers found
+The repository’s strongest opportunity is to combine causal estimation with a reproducible, leakage-safe decision pipeline. Existing work often studies one estimator, one dataset, or one targeting constraint in isolation. The Causal Uplift Engine can contribute an end-to-end comparison that links treatment assignment checks, retrieval or feature construction, model training, uncertainty/failure analysis, and constrained targeting under a common evaluation protocol.
 
-Papers not on the reading list. Add them to `READING_LIST.md` in the same PR.
-
-| Paper | Link | Year | Why it matters |
-|---|---|---|---|
-| | | | |
-
-## 3. Synthesis
-
-**What is already solved?**
-
-**What is still open?** (Be specific: which paper, which limitation.)
-
-**Does anything already do what our Model 1 does?** If yes, cite it and explain how M1 differs. If no, list the searches you ran.
-
-**Risks this review uncovered for our project:**
-
-## 4. Related-work paragraph for the report
-
-One or two paragraphs covering your theme, citing papers by ID. Person 5 merges these into the final report.
