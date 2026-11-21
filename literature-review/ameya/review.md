@@ -1,4 +1,4 @@
-# Ameya — Literature Review for the Causal Uplift Engine
+# Ameya — Literature Review for the Causal Uplift Engine. 
 
 ## Scope
 
