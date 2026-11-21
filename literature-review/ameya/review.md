@@ -1,33 +1,130 @@
-# Ameya — Literature Review for the Causal Uplift Engine. 
+# Literature Review: Ameya Khond
 
-## Scope
+**Focus:** Causal estimation, uplift objectives, imbalance, uncertainty, and treatment allocation.
 
-The papers below were selected from 2023–2025 and focus on practical issues for the project: uplift estimation, heterogeneous treatment effects, imbalance, confounding, uncertainty, constraints, and treatment-allocation decisions.
+**Status:** first-pass draft. Exact numerical results and table references require full-text verification before submission. U1–U8 are identifiers local to this review.
 
-## Unique papers
+## Papers I took
 
-| # | Paper and year | Main contribution | 3–4 line summary | How it can be used in the Causal Uplift Engine |
-|---|---|---|---|---|
-| 1 | **Do-PFN: Causal Inference with Tabular Foundation Models** — Balazadeh et al. (2025)  [Paper](https://arxiv.org/abs/2506.06039) | Tabular foundation model for causal effect estimation | Do-PFN adapts pretrained tabular modeling ideas to estimate causal quantities from heterogeneous tabular data. It is designed to handle nonlinear relationships and mixed feature types while producing treatment-effect estimates. The work is relevant to rapid model comparison on small or medium-sized datasets. | Add it as an optional advanced baseline beside S-, T-, X-, and R-learners. Compare its CATE/uplift estimates with the existing models on Hillstrom and Criteo, then evaluate whether it improves AUUC, Qini, policy value, and calibration. |
-| 2 | **Causal Machine Learning for Predicting Treatment Outcomes** — Feuerriegel et al. (2024)  [Paper](https://doi.org/10.1038/s41591-024-02902-1) | Practical framework for causal ML and treatment-effect prediction | This paper explains how causal machine learning can estimate individualized treatment effects and support treatment decisions. It emphasizes the difference between prediction and causal estimation, including assumptions, model selection, validation, and interpretability. It provides a useful bridge between statistical causal inference and deployable ML systems. | Use it to structure the project’s methodology and assumptions sections. It can guide the comparison of meta-learners, doubly robust estimators, validation metrics, and the distinction between predicting response and predicting incremental response. |
-| 3 | **Uplift Modeling with Continuous Treatments: A Predict-Then-Optimize Approach** — De Vos et al. (2024)  [Paper](https://arxiv.org/abs/2412.09232) | Uplift estimation when treatment is a dose or continuous action | The paper extends uplift modeling beyond binary treatment. It estimates conditional average dose responses and then solves a constrained allocation problem, including budget and fairness constraints. The predict-then-optimize design separates effect estimation from the final policy decision. | Extend the engine later from “contact/no contact” to campaign intensity, discount amount, number of messages, or treatment dose. The optimization stage can support budget-aware targeting instead of ranking customers only by predicted uplift. |
-| 4 | **Class Flipping for Uplift Modeling and Heterogeneous Treatment Effect Estimation on Imbalanced RCT Data** — Rudaś & Jaroszewicz (2024)  [Paper](https://arxiv.org/abs/2412.10009) | Treatment/class imbalance correction without distorting uplift | This work addresses severe treatment and outcome imbalance in randomized experiments. It proposes class flipping as an alternative to ordinary over- or undersampling, which can distort the estimated treatment effect. The authors show that the approach is especially useful for transformed-outcome uplift models. | Use it in the imbalance experiment for the Hillstrom and Criteo datasets. Implement it as a preprocessing option, then compare it with class weights, stratified sampling, and ordinary resampling using Qini/AUUC and treatment-group calibration. |
-| 5 | **The Impact of Heteroskedasticity on Uplift Modeling** — Bokelmann & Lessmann (2023)  [Paper](https://arxiv.org/abs/2312.05234) | Ranking bias caused by unequal outcome variance | The paper shows that heteroskedasticity can reverse the expected quality of an uplift ranking. Individuals with high treatment effects may be pushed toward the bottom when the variance changes across groups or covariate regions. It combines theoretical analysis with simulations and real data. | Add variance diagnostics and subgroup analysis to the evaluation pipeline. Check whether high-variance customer segments receive systematically poor ranks, and report variance-aware failure cases rather than relying on a single global AUUC or Qini score. |
-| 6 | **Propensity Score Oversampling and Matching for Uplift Modeling** — Vairetti, Gennaro & Maldonado (2024)  [Paper](https://doi.org/10.1016/j.ejor.2024.03.024) | Resampling and matching for confounded or imbalanced uplift data | The paper proposes propensity score oversampling and matching (ProSOM). It combines treatment-aware oversampling with propensity-score matching to improve comparability between treated and untreated observations. The approach targets small or imbalanced datasets and evaluates the resulting uplift models on benchmark data. | Use ProSOM as an observational-data robustness baseline. Add propensity-score diagnostics, overlap checks, and balance tables before and after preprocessing; this will make the engine safer when randomized treatment is unavailable. |
-| 7 | **Partial Counterfactual Identification and Uplift Modeling: Theoretical Results and Real-World Assessment** — Verhelst et al. (2024)  [Paper](https://doi.org/10.1007/s10994-023-06317-w) | Bounds on counterfactual probabilities from uplift estimates | This paper studies counterfactual statements that are more detailed than an average treatment effect. It derives bounds and a point estimator under a conditional-independence assumption, then evaluates them with simulated and customer data. The work highlights uncertainty that remains even when an uplift estimate is available. | Use the paper to expand the engine beyond point CATE predictions. Report uncertainty or bounds for selected segments, document assumptions, and avoid presenting a customer’s predicted uplift as a directly observed individual causal effect. |
-| 8 | **Uplift Modeling Under Limited Supervision** — Panagopoulos et al. (2024)  [Paper](https://arxiv.org/abs/2403.19289) | Learning uplift when treatment labels or outcomes are incomplete | This work considers settings where supervision is limited, such as partially observed treatment assignments or incomplete outcome information. It develops methods for learning useful treatment-effect signals despite missing information. The problem is important when production data are less clean than an RCT benchmark. | Use it as a roadmap for missing-treatment and delayed-outcome extensions. Add missingness checks to the data pipeline, compare complete-case and weakly supervised training, and document which records are eligible for causal evaluation. |
-| 9 | **TERRA: A Transformer-Enabled Recursive R-Learner for Longitudinal HTE Estimation** — Shi et al. (2025)  [Paper](https://arxiv.org/abs/2510.22407) | Longitudinal heterogeneous treatment-effect estimation | TERRA combines transformer representations with an R-learner-style residualization strategy for repeated or longitudinal observations. The transformer captures temporal dependencies while the causal objective separates treatment and outcome variation. It is designed for settings where treatment effects evolve over time. | Use it if the engine is extended to repeated campaigns or customer histories. Represent a customer’s sequence of interactions, include time-aware splits, and compare static uplift models against longitudinal CATE estimates. |
-| 10 | **Guardrailed Uplift Targeting: A Causal Optimization Playbook for Marketing Strategy** — Sapru (2025)  [Paper](https://arxiv.org/abs/2512.19805) | Constrained and guardrailed uplift targeting | This paper frames uplift targeting as a policy-optimization problem rather than only a prediction task. It emphasizes guardrails such as budget, fairness, contact fatigue, risk, and business constraints. The approach is closely aligned with deploying uplift scores into a real marketing decision process. | Use it to design the project’s policy layer. After estimating uplift, apply contact-cap, budget, suppression, fairness, and minimum-benefit constraints; report policy value and guardrail violations in addition to model metrics. |
+| ID | Paper | Type |
+|---|---|---|
+| U1 | Do-PFN: In-Context Learning for Causal Effect Estimation (Robertson et al., 2025) | Causal foundation model |
+| U2 | Causal Machine Learning for Predicting Treatment Outcomes (Feuerriegel et al., 2024) | Methods review |
+| U3 | Uplift Modeling with Continuous Treatments: A Predict-Then-Optimize Approach (De Vos et al., 2024) | Treatment allocation |
+| U4 | Class Flipping for Uplift Modeling and Heterogeneous Treatment Effect Estimation on Imbalanced RCT Data (Rudaś & Jaroszewicz, 2024) | Imbalance correction |
+| U5 | The Impact of Heteroskedasticity on Uplift Modeling (Bokelmann & Lessmann, 2023) | Ranking diagnostics |
+| U6 | Propensity Score Oversampling and Matching for Uplift Modeling (Vairetti, Gennaro & Maldonado, 2024) | Observational uplift |
+| U7 | Partial Counterfactual Identification and Uplift Modeling: Theoretical Results and Real-World Assessment (Verhelst et al., 2024 journal volume; online 2023) | Counterfactual bounds |
+| U8 | Uplift Modeling with Quasi-Loss-Functions (Hu, de Haan & Skiera, 2024) | Uplift objectives |
 
-## Recommended implementation sequence
+## 1. Paper notes
 
-1. Establish leakage-safe baselines with S-, T-, X-, and R-learners on Hillstrom and Criteo.
-2. Add imbalance and confounding experiments using class flipping and propensity-score matching/oversampling.
-3. Add variance, overlap, and uncertainty diagnostics so that rankings are not treated as automatically reliable.
-4. Add a policy optimizer with budget and contact-frequency constraints, following the predict-then-optimize and guardrailed-targeting ideas.
-5. Treat Do-PFN and TERRA as advanced extensions after the baseline pipeline is stable. Use TERRA only when longitudinal customer histories are available.
+### U1 Do-PFN (Robertson et al., 2025)
 
-## Project-level research gap
+- **Link:** https://arxiv.org/abs/2506.06039
+- **Problem:** estimate causal effects using a pretrained model that learns from examples supplied in context.
+- **Method:** applies the prior-data fitted network approach to causal effect estimation. A transformer learns from simulated causal tasks so that it can make predictions for a new dataset through in-context examples.
+- **Results:** quantitative comparisons and benchmark details still require verification from the full paper.
+- **Limitations:** the fit between simulated training tasks and real data needs examination. Large-table scalability must be measured rather than assumed.
+- **Relevance to us:** a candidate causal foundation-model comparator. Evaluate its effects and resource usage using the same data splits and uplift metrics as Model 1.
+- **Open questions:** how does it select context rows, and does its inference procedure already overlap with separate treatment-arm retrieval?
 
-The repository’s strongest opportunity is to combine causal estimation with a reproducible, leakage-safe decision pipeline. Existing work often studies one estimator, one dataset, or one targeting constraint in isolation. The Causal Uplift Engine can contribute an end-to-end comparison that links treatment assignment checks, retrieval or feature construction, model training, uncertainty/failure analysis, and constrained targeting under a common evaluation protocol.
+### U2 Causal Machine Learning for Predicting Treatment Outcomes (Feuerriegel et al., 2024)
 
+- **Link:** https://doi.org/10.1038/s41591-024-02902-1
+- **Problem:** use machine learning to predict treatment benefit while preserving the assumptions needed for causal interpretation.
+- **Method:** reviews causal machine-learning approaches for treatment outcomes, discussing heterogeneous effects, identification, validation, and practical application. It connects statistical causal inference with flexible predictive models.
+- **Data:** a methodological review with a healthcare focus rather than a marketing benchmark.
+- **Limitations:** recommendations require adaptation to campaign outcomes and customer targeting. The review does not establish that a particular estimator will work best on our data.
+- **Relevance to us:** use it to explain why predicting customer response differs from estimating incremental response, and to document randomization, overlap, and treatment definitions.
+- **Open questions:** which validation practices transfer to Hillstrom and Criteo when individual counterfactual outcomes remain unobserved?
+
+### U3 Uplift Modeling with Continuous Treatments (De Vos et al., 2024)
+
+- **Link:** https://arxiv.org/abs/2412.09232
+- **Problem:** choose a treatment dose when actions are continuous rather than simply treatment versus control.
+- **Method:** first estimates conditional average dose responses, then formulates dose allocation as an integer linear optimization problem. The allocation can incorporate resource constraints, fairness considerations, and individual costs or benefits.
+- **Data/results:** demonstrates the framework through applications in healthcare, lending, and human resource management; exact numerical comparisons require full-text verification.
+- **Limitations:** binary campaign datasets do not by themselves identify the effects of arbitrary discount amounts or contact intensities. A continuous-treatment extension needs suitable dose data and identification assumptions.
+- **Relevance to us:** a design reference for extending uplift scores into budget-constrained decisions. Continuous campaign intensity is a future extension when suitable data are available.
+- **Open questions:** which costs and business constraints can be specified for our current binary targeting tasks?
+
+### U4 Class Flipping for Uplift Modeling and HTE Estimation (Rudaś & Jaroszewicz, 2024)
+
+- **Link:** https://arxiv.org/abs/2412.10009
+- **Problem:** correct treatment and outcome imbalance in randomized experiments without distorting predicted treatment effects.
+- **Method:** flips selected outcome labels according to a designed transformation rather than relying on ordinary over- or undersampling. It treats transformed-outcome models separately and analyzes when the treatment-effect target is preserved.
+- **Data/results:** the paper combines theoretical analysis with empirical experiments. Exact datasets and effect sizes need verification in the full text.
+- **Limitations:** the transformation must follow the paper's assumptions and estimator-specific procedure; arbitrary label changes are not justified.
+- **Relevance to us:** compare the method with class weights and unmodified training on imbalanced campaign data. Apply any transformation only within training folds.
+- **Open questions:** does the method suit M1's separate outcome heads, or is it more appropriate for a transformed-outcome baseline?
+
+### U5 The Impact of Heteroskedasticity on Uplift Modeling (Bokelmann & Lessmann, 2023)
+
+- **Link:** https://arxiv.org/abs/2312.05234
+- **Problem:** determine whether unequal outcome variance can distort the ranking used for treatment prioritization.
+- **Method:** analyzes ranking bias theoretically and illustrates it using simulation and real data. It shows that high-effect units can accumulate near the bottom of an estimated ranking under heteroskedasticity.
+- **Results:** the central finding concerns a failure of ranking-based allocation; numerical magnitudes require full-text verification.
+- **Limitations:** the practical importance depends on the outcome distribution and estimator. Findings should be tested on our tasks, especially when transferring from continuous to binary outcomes.
+- **Relevance to us:** add subgroup and ranking diagnostics rather than treating one aggregate Qini score as a complete assessment.
+- **Open questions:** how stable are the highest-ranked customer groups across folds, seeds, and outcome definitions?
+
+### U6 Propensity Score Oversampling and Matching for Uplift Modeling (Vairetti et al., 2024)
+
+- **Link:** https://doi.org/10.1016/j.ejor.2024.03.024
+- **Problem:** estimate uplift in small or imbalanced datasets where treatment assignment may be confounded.
+- **Method:** ProSOM combines propensity-score matching with class-aware oversampling to improve comparability between treatment groups. It extends matching to settings with limited data and treatment imbalance.
+- **Data/results:** evaluates the approach on benchmark datasets; exact values and table references require checking.
+- **Limitations:** matching on observed variables cannot eliminate unmeasured confounding. Synthetic examples also require a clear definition of valid covariates and outcomes.
+- **Relevance to us:** an optional observational-data experiment. For randomized campaign data, preserve the original experiment as the main benchmark and test whether preprocessing changes the estimand or evaluation distribution.
+- **Open questions:** does matching discard useful overlap, and what effective sample size remains after preprocessing?
+
+### U7 Partial Counterfactual Identification and Uplift Modeling (Verhelst et al., 2024)
+
+- **Link:** https://doi.org/10.1007/s10994-023-06317-w
+- **Problem:** determine what uplift estimates reveal about joint factual and counterfactual outcomes.
+- **Method:** derives bounds on counterfactual probabilities expressed through uplift-related quantities. It also studies a point estimator under conditional independence of potential outcomes and evaluates the approach with simulations and customer data.
+- **Data:** synthetic experiments and a telecom customer campaign dataset.
+- **Limitations:** the point estimate requires an additional assumption about potential outcomes. Identification bounds are conceptually different from sampling confidence intervals.
+- **Relevance to us:** support careful interpretation of customer-level scores. A predicted CATE does not reveal whether a particular customer would respond only under treatment.
+- **Open questions:** can the dashboard report segment-level bounds without presenting them as individual ground truth?
+
+### U8 Uplift Modeling with Quasi-Loss-Functions (Hu et al., 2024)
+
+- **Link:** https://doi.org/10.1007/s10618-024-01042-x
+- **Problem:** train toward uplift when individual treatment effects cannot be observed as ordinary supervised labels.
+- **Method:** proposes four quasi-loss functions for uplift estimation and evaluates UpliftQL models on simulated and empirical data with binary and continuous outcomes.
+- **Results:** the authors report competitive performance among the compared models. Exact table-level numerical comparisons remain to be checked.
+- **Limitations:** a different loss does not solve confounding or reveal individual counterfactuals. Applying it to a transformer with separate heads requires checking the mathematical objective.
+- **Relevance to us:** compare an uplift-oriented loss against factual outcome prediction while holding the encoder, folds, and tuning budget fixed.
+- **Open questions:** which loss is appropriate for the visit outcome, and does it improve held-out uplift ranking consistently?
+
+## 2. New papers found
+
+| Paper | Link | Year | Why it matters |
+|---|---|---|---|
+| Rudaś & Jaroszewicz, **Class Flipping for Uplift Modeling and Heterogeneous Treatment Effect Estimation on Imbalanced RCT Data** [U4; shared ID F2] | https://arxiv.org/abs/2412.10009 | 2024 | An imbalance experiment that checks whether correction preserves the treatment-effect target |
+| De Vos et al., **Uplift Modeling with Continuous Treatments: A Predict-Then-Optimize Approach** [U3; shared ID F3] | https://arxiv.org/abs/2412.09232 | 2024 | Connects estimated treatment benefit with constrained allocation |
+| Hu et al., **Uplift Modeling with Quasi-Loss-Functions** [U8; shared ID F4] | https://doi.org/10.1007/s10618-024-01042-x | 2024 | A candidate alternative to factual prediction losses for Model 1 |
+
+These three papers are included in the shared `../READING_LIST.md` as F2–F4.
+
+## 3. Synthesis
+
+**What is already solved?** Causal foundation models offer in-context effect estimation [U1], while causal-ML methodology explains the assumptions behind treatment-benefit prediction [U2]. The other papers address specific pieces of the pipeline: imbalance [U4, U6], ranking reliability [U5], counterfactual interpretation [U7], uplift objectives [U8], and constrained allocation [U3].
+
+**What is still open?** These papers motivate experiments rather than establish that one combined system will outperform existing approaches. For our project, the open questions are whether separate treated/control retrieval improves uplift on large tables, which training objective works best, and whether gains survive subgroup checks and repeated runs.
+
+**Does anything already do what our Model 1 does?** This first-pass review does not establish novelty. Do-PFN [U1] is a direct causal-model comparison whose context construction must be checked in detail. The other papers focus on losses, data correction, interpretation, or allocation rather than demonstrating the entire proposed architecture. A full-text comparison and citation search are necessary before claiming that the combination of a tabular transformer, separate treatment-arm retrieval, and causal outcome heads is new.
+
+**Risks this review uncovered:**
+
+- Label transformations or oversampling can change the target unless implemented under the relevant assumptions.
+- Neighbor retrieval, preprocessing, and synthetic-data generation must use training folds only.
+- Overall uplift scores can hide unstable rankings or weak subgroup performance.
+- CATE estimates, counterfactual identification bounds, and sampling confidence intervals answer different questions.
+- Continuous-dose allocation requires data beyond binary treatment assignments.
+
+## 4. Related-work paragraph for the report
+
+Recent causal machine-learning work distinguishes treatment-benefit estimation from ordinary response prediction [U2], and Do-PFN studies causal estimation through in-context learning [U1]. Reliable uplift targeting also depends on the training objective and data distribution. Quasi-loss functions provide objectives designed for uplift [U8], class flipping addresses imbalance in randomized data [U4], and propensity-score oversampling and matching address comparability in observational settings [U6]. Unequal outcome variance can distort uplift rankings [U5], while partial counterfactual identification clarifies what those scores can and cannot reveal about individual response [U7]. Predict-then-optimize methods connect effect estimates with constrained treatment allocation [U3]. These findings motivate our comparison of Model 1's retrieval and loss choices, together with leakage checks, subgroup evaluation, and explicit assumptions for downstream targeting.
