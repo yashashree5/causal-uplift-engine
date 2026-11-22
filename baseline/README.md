@@ -12,7 +12,26 @@ Runs **Hillstrom** and **Criteo** uplift benchmarks using the folds, comparison 
 - [Hillstrom notebook](../notebooks/baseline_hillstrom.ipynb) runs both email arms. It can download the original Hillstrom archive or read a verified copy supplied through `HILLSTROM_DATA`.
 - [Criteo notebook](../notebooks/baseline_criteo.ipynb) runs the **50,000-row v2.1** benchmark. Save the [official v2.1 archive](https://huggingface.co/datasets/criteo/criteo-uplift/blob/main/criteo-research-uplift-v2.1.csv.gz) as `data/criteo-v21-source/criteo.csv.gz`, or set `CRITEO_V21_DATA_DIR` to the folder containing `criteo.csv.gz`.
 
-Both notebooks show the fold log, Qini comparison, and curves. Set `CAUSALPFN_CHECKPOINT` to use a local copy of the published checkpoint. The 2.5M v2.1 results in the Criteo report come from a separate GPU run.
+Both notebooks show the fold log, Qini comparison, and curves. Set `CAUSALPFN_CHECKPOINT` to use a local copy of the published checkpoint.
+
+## Reproduce the 2.5M Criteo v2.1 run
+
+Use a CUDA GPU and the [baseline GPU requirements](requirements.txt). Initialize the pinned submodule with `git submodule update --init --recursive`. Save the [official Criteo v2.1 archive](https://huggingface.co/datasets/criteo/criteo-uplift/blob/main/criteo-research-uplift-v2.1.csv.gz) as `data/criteo-v21-source/criteo.csv.gz` and the [published CausalPFN checkpoint](https://huggingface.co/vdblm/causalpfn/blob/main/causalpfn_v0.pt) as `data/causalpfn_v0.pt`.
+
+From the repository root, run these commands in Bash. Use the same output directory for both commands.
+
+```bash
+python -m baseline.prepare_criteo_v21 \
+  --source data/criteo-v21-source/criteo.csv.gz \
+  --output-dir outputs/criteo-2p5m-v21-rerun
+
+LOKY_MAX_CPU_COUNT=8 OMP_NUM_THREADS=8 MKL_NUM_THREADS=4 OPENBLAS_NUM_THREADS=1 \
+  python -m baseline.run_criteo_v21 \
+  --checkpoint data/causalpfn_v0.pt \
+  --output-dir outputs/criteo-2p5m-v21-rerun
+```
+
+The sampler verifies the archive checksum and freezes the stratified cohort and its five folds. The runner verifies the cohort and checkpoint, logs progress for all 25 method-folds, and saves predictions and aggregate Qini reports under the output directory. It can resume a run with the same configuration. The original run used PyTorch `2.3.1+cu121` and PyArrow `25.0.1`. The cohort and run manifests record the seeds, package versions, files, and checksums. [Original run results and settings](../reports/baseline_results/criteo.md#2500000-rows-from-criteo-v21)
 
 ## What runs
 
