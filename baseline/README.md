@@ -1,6 +1,37 @@
 # Baseline Reproduction: CausalPFN
 
-Reproduces paper Tables 2 and 7 (normalized Qini) separately for **Hillstrom** and **Criteo**, using the authors' own data loaders, folds, comparison methods, and Qini code from the pinned submodule `third_party/CausalPFN`.
+Runs **Hillstrom** and **Criteo** uplift benchmarks using the folds, comparison methods, and Qini code from the pinned CausalPFN submodule. The reports compare with Tables 2 and 7 and record the dataset used for each run.
+
+## Benchmark reports
+
+- [Hillstrom](../reports/baseline_results/hillstrom.md) covers both email arms and compares them with Table 2.
+- [Criteo Uplift v2.1](../reports/baseline_results/criteo.md) covers separately drawn stratified samples of **50,000** and **2,500,000** rows. Both use the verified v2.1 archive as their source. Tables 2 and 7 provide reference scores from the paper's cohorts.
+
+## Run the notebooks
+
+- [Hillstrom notebook](../notebooks/baseline_hillstrom.ipynb) runs both email arms. It can download the original Hillstrom archive or read a verified copy supplied through `HILLSTROM_DATA`.
+- [Criteo notebook](../notebooks/baseline_criteo.ipynb) runs the **50,000-row v2.1** benchmark. Save the [official v2.1 archive](https://huggingface.co/datasets/criteo/criteo-uplift/blob/main/criteo-research-uplift-v2.1.csv.gz) as `data/criteo-v21-source/criteo.csv.gz`, or set `CRITEO_V21_DATA_DIR` to the folder containing `criteo.csv.gz`.
+
+Both notebooks show the fold log, Qini comparison, and curves. Set `CAUSALPFN_CHECKPOINT` to use a local copy of the published checkpoint.
+
+## Reproduce the 2.5M Criteo v2.1 run
+
+Use a CUDA GPU and the [baseline GPU requirements](requirements.txt). Initialize the pinned submodule with `git submodule update --init --recursive`. Save the [official Criteo v2.1 archive](https://huggingface.co/datasets/criteo/criteo-uplift/blob/main/criteo-research-uplift-v2.1.csv.gz) as `data/criteo-v21-source/criteo.csv.gz` and the [published CausalPFN checkpoint](https://huggingface.co/vdblm/causalpfn/blob/main/causalpfn_v0.pt) as `data/causalpfn_v0.pt`.
+
+From the repository root, run these commands in Bash. Use the same output directory for both commands.
+
+```bash
+python -m baseline.prepare_criteo_v21 \
+  --source data/criteo-v21-source/criteo.csv.gz \
+  --output-dir outputs/criteo-2p5m-v21-rerun
+
+LOKY_MAX_CPU_COUNT=8 OMP_NUM_THREADS=8 MKL_NUM_THREADS=4 OPENBLAS_NUM_THREADS=1 \
+  python -m baseline.run_criteo_v21 \
+  --checkpoint data/causalpfn_v0.pt \
+  --output-dir outputs/criteo-2p5m-v21-rerun
+```
+
+The sampler verifies the archive checksum and freezes the stratified cohort and its five folds. The runner verifies the cohort and checkpoint, logs progress for all 25 method-folds, and saves predictions and aggregate Qini reports under the output directory. It can resume a run with the same configuration. The original run used PyTorch `2.3.1+cu121` and PyArrow `25.0.1`. The cohort and run manifests record the seeds, package versions, files, and checksums. [Original run results and settings](../reports/baseline_results/criteo.md#2500000-rows-from-criteo-v21)
 
 ## What runs
 
@@ -16,7 +47,7 @@ Methods per task: CausalPFN, X-, S-, DA-, T-Learner (EconML, `hpo=False`), each 
 ## How to run (GPU server)
 
 ```bash
-git clone --recurse-submodules https://github.com/yashashree5/causal-uplift-engine.git
+git clone --branch baseline-reproduction --recurse-submodules https://github.com/yashashree5/causal-uplift-engine.git
 cd causal-uplift-engine
 python3.10 -m venv .venv-baseline && source .venv-baseline/bin/activate
 pip install -r baseline/requirements.txt
@@ -32,7 +63,7 @@ Outputs:
 - Run metadata: `outputs/predictions/<task>_run.json`
 - Results: `reports/baseline_hillstrom.md|csv`, `reports/baseline_criteo.md|csv` (commit these)
 
-**Jupyter instead of scripts:** open `notebooks/baseline_hillstrom.ipynb` or `notebooks/baseline_criteo.ipynb`. Each runs one dataset, shows progress, the comparison with the paper, and Qini curves in the notebook, and keeps its predictions in its own folder (`outputs/hillstrom/`, `outputs/criteo/`). They work in local Jupyter, on the college server, and on Colab/Kaggle (they clone the repo there).
+The Criteo shell script uses the paper's historical scikit-uplift archive. That archive returned HTTP 404 during the v2.1 benchmark runs.
 
 Re-running skips finished folds. To run one piece: `python -m baseline.run --task criteo_full --methods causalpfn`.
 

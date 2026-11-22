@@ -1,0 +1,11 @@
+task,cohort,method,held_out_rows,qini,normalized_qini,paper_table,paper_normalized_qini,difference_from_paper_reference,tolerance_status
+criteo_v21_stratified_50k,criteo_uplift_v2.1,x_learner,50000,0.7678010972283865,1.0,2,1.0,0.0,PASS
+criteo_v21_stratified_50k,criteo_uplift_v2.1,da_learner,50000,0.7674164747804851,0.999499059783465,2,0.626,0.373499059783465,FAIL
+criteo_v21_stratified_50k,criteo_uplift_v2.1,t_learner,50000,0.7209346947151462,0.9389602298272052,2,0.701,0.23796022982720522,FAIL
+criteo_v21_stratified_50k,criteo_uplift_v2.1,causalpfn,50000,0.6461800727092575,0.8415982668452059,2,0.859,-0.017401733154794097,PASS
+criteo_v21_stratified_50k,criteo_uplift_v2.1,s_learner,50000,0.4348436490265732,0.5663493456785549,2,0.881,-0.3146506543214451,FAIL
+criteo_v21_stratified_2p5m,criteo_uplift_v2.1,causalpfn,2500000,0.8204245784649064,1.0,7,0.939,0.061000000000000054,FAIL
+criteo_v21_stratified_2p5m,criteo_uplift_v2.1,x_learner,2500000,0.8107814435042641,0.9882461652006019,7,0.994,-0.005753834799398061,PASS
+criteo_v21_stratified_2p5m,criteo_uplift_v2.1,da_learner,2500000,0.7063718762277497,0.8609833186000347,7,0.955,-0.09401668139996522,FAIL
+criteo_v21_stratified_2p5m,criteo_uplift_v2.1,t_learner,2500000,0.6463372552978318,0.7878082547297538,7,0.902,-0.11419174527024623,FAIL
+criteo_v21_stratified_2p5m,criteo_uplift_v2.1,s_learner,2500000,0.45856291198232035,0.5589336594965693,7,1.0,-0.44106634050343074,FAIL
