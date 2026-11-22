@@ -1,4 +1,4 @@
-Pinned CausalPFN source goes here (Linear: CUE M2 "Add CausalPFN repo at pinned commit"):
+Pinned CausalPFN source (git submodule) at commit `7da4afa`, the version closest to the paper.
+See `baseline/README.md` for why it is not the latest release.
 
-    git submodule add https://github.com/vdblm/CausalPFN.git third_party/CausalPFN
-    cd third_party/CausalPFN && git checkout b7ed2f1
+    git submodule update --init --recursive

@@ -26,7 +26,6 @@ pipeline = [
     "python-dotenv>=1",
 ]
 models = [
-    "causalpfn==0.1.5",
     "scikit-uplift>=0.5.1",
     "econml",
     "torch>=2.3",

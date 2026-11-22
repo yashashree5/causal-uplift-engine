@@ -1,0 +1,11 @@
+task,cohort,method,held_out_rows,qini,normalized_qini,paper_table,paper_normalized_qini,difference_from_paper_reference,paper_prose_reference,difference_from_paper_prose_reference,tolerance_status,paper_prose_tolerance_status
+hill_womens_vs_none,scikit_uplift_hillstrom,x_learner,42693,0.6696395178818403,1.0,2,0.975,0.025000000000000022,0.98,0.020000000000000018,PASS,PASS
+hill_womens_vs_none,scikit_uplift_hillstrom,da_learner,42693,0.6661945755528983,0.9948555271351983,2,0.985,0.009855527135198328,0.964,0.030855527135198346,PASS,FAIL
+hill_womens_vs_none,scikit_uplift_hillstrom,t_learner,42693,0.6552249263972834,0.9784741027080477,2,0.991,-0.012525897291952304,0.972,0.006474102708047713,PASS,PASS
+hill_womens_vs_none,scikit_uplift_hillstrom,s_learner,42693,0.6547405181717371,0.9777507161506377,2,1.0,-0.02224928384936231,1.0,-0.02224928384936231,PASS,PASS
+hill_womens_vs_none,scikit_uplift_hillstrom,causalpfn,42693,0.6397876810966696,0.9554210347686827,2,0.992,-0.03657896523131732,0.968,-0.012578965231317296,FAIL,PASS
+hill_mens_vs_none,scikit_uplift_hillstrom,causalpfn,42613,0.5183770910389909,1.0,2,0.968,0.03200000000000003,0.992,0.008000000000000007,FAIL,PASS
+hill_mens_vs_none,scikit_uplift_hillstrom,s_learner,42613,0.5170342366732262,0.9974095028716004,2,1.0,-0.002590497128399649,1.0,-0.002590497128399649,PASS,PASS
+hill_mens_vs_none,scikit_uplift_hillstrom,da_learner,42613,0.5148724052368574,0.9932391190453479,2,0.964,0.029239119045347928,0.985,0.008239119045347909,PASS,PASS
+hill_mens_vs_none,scikit_uplift_hillstrom,t_learner,42613,0.5134187548235998,0.9904348855281142,2,0.972,0.01843488552811423,0.991,-0.0005651144718857859,PASS,PASS
+hill_mens_vs_none,scikit_uplift_hillstrom,x_learner,42613,0.4954508005803372,0.9557729481974171,2,0.98,-0.02422705180258289,0.975,-0.019227051802582884,PASS,PASS

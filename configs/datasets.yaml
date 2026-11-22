@@ -1,4 +1,4 @@
-# Matches the CausalPFN authors' setup (notebooks/qini.ipynb, benchmarks/*.py at commit b7ed2f1).
+# Matches the CausalPFN authors' setup (notebooks/qini.ipynb, benchmarks/*.py at commit 7da4afa, see baseline/README.md).
 seed: 82718
 n_folds: 5
 

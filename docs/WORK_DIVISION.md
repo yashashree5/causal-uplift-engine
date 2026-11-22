@@ -86,7 +86,7 @@ People 3, 4, and 5 don't need to wait for the full pipeline. Person 3 can use th
 **Owns:** reproducing the CausalPFN paper's numbers, and preparing the exact data the models train on.
 
 **Tasks:**
-1. Add the CausalPFN repo under `third_party/` at commit `b7ed2f1`, and set up the authors' pinned environment on the college GPU.
+1. Add the CausalPFN repo under `third_party/` at commit `7da4afa` (done), and set up the authors' pinned environment on the college GPU.
 2. Run the CausalPFN README example on the college GPU. Record the GPU model, memory, and the largest context that runs.
 3. Write `pipeline/prepare.py`: the authors' preprocessing and 5-fold splits with seed 82718 for all four tasks.
 4. Write the equality test: our arrays must be identical to the authors' arrays.

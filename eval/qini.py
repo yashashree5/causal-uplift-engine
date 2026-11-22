@@ -1,6 +1,6 @@
 """Qini curve and score, ported line-for-line from the CausalPFN authors' code.
 
-Source: https://github.com/vdblm/CausalPFN/blob/b7ed2f1/src/causalpfn/evaluation.py (Apache-2.0).
+Source: https://github.com/vdblm/CausalPFN/blob/7da4afa/src/causalpfn/evaluation.py (Apache-2.0).
 Keep this identical to the reference so our numbers are comparable with the paper's tables.
 tests/test_qini.py checks it against the reference when `causalpfn` is installed.
 """

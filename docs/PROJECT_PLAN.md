@@ -37,7 +37,7 @@ Both are loaded with `scikit-uplift` (`fetch_hillstrom`, `fetch_criteo(percent10
 ## 5. Baseline: CausalPFN reproduction
 
 - Paper: Balazadeh et al., *CausalPFN: Amortized Causal Effect Estimation via In-Context Learning*, NeurIPS 2025. https://arxiv.org/abs/2506.07918
-- Code: https://github.com/vdblm/CausalPFN (pin commit `b7ed2f1`, package `causalpfn==0.1.5`)
+- Code: https://github.com/vdblm/CausalPFN (pinned as submodule `third_party/CausalPFN` at commit `7da4afa`, the version closest to the paper; see `baseline/README.md`)
 - Protocol: 5-fold honest splitting, seed `82718`, normalized Qini score, comparison methods X/S/T/DA-Learner (EconML).
 
 ### Numbers we must reproduce
