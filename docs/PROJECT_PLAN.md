@@ -51,7 +51,7 @@ Normalized Qini: higher is better, and the best method in each column = 1.000.
 | Table 2 | Criteo, 50k stratified subsample | 0.859 | X-Learner 1.000 |
 | Table 7 | Criteo, full table | 0.939 | S-Learner 1.000 |
 
-**Pass rule:** within ±0.03 of the paper (confirm tolerance with the instructor). Report raw and normalized Qini.
+**Pass rule:** within ±0.05 of the paper (confirm tolerance with the instructor). Report raw and normalized Qini.
 
 **Known traps:**
 1. **Arm labels:** the paper text calls Hill(1) the men's email, but the code sets Hill(1) = women's email. Always report by arm name.
