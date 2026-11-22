@@ -62,7 +62,7 @@ def score_task(out_dir: Path, task: str) -> pd.DataFrame:
                 "qini_normalized": norm[method],
                 "paper_normalized": p,
                 "difference": diff,
-                "within_tolerance": None if diff is None else abs(diff) <= TOLERANCE,
+                "within_tolerance": None if p is None else p - TOLERANCE <= norm[method] <= p + TOLERANCE,
                 "n_test_rows": len(preds[method]),
             }
         )

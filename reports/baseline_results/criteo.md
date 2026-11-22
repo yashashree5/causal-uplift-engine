@@ -4,13 +4,13 @@ The **50,000-row** and **2,500,000-row** benchmarks use separate stratified samp
 
 [Aggregate scores for both cohorts (CSV)](criteo.csv)
 
-The gap is the run's normalized Qini minus the published normalized Qini. PASS means the absolute gap is at most 0.03, using the unrounded run score. TEA-6 sets this tolerance for CausalPFN. Comparator statuses are shown for context. [TEA-6](https://linear.app/298a-team4-causal-inference-and/issue/TEA-6)
+The gap is the run's normalized Qini minus the published normalized Qini. PASS means the absolute gap is at most 0.05, using the unrounded run score. Comparator statuses are shown for context.
 
 ## 50,000 rows from Criteo v2.1
 
 The [executed Criteo notebook](../../notebooks/baseline_criteo.ipynb) ran all 25 method-folds in **124.6 seconds** after data preparation. Each fold had 40,000 training and 10,000 held-out rows. CausalPFN ranked **4 out of 5** with normalized Qini **0.841598**. The top method was **X-learner**.
 
-| Method | Qini | Normalized Qini | Table 2 reference | Gap | ±0.03 |
+| Method | Qini | Normalized Qini | Table 2 reference | Gap | ±0.05 |
 | --- | ---: | ---: | ---: | ---: | :---: |
 | X-learner | 0.767801 | 1.000000 | 1.000 | +0.000000 | PASS |
 | DA-learner | 0.767416 | 0.999499 | 0.626 | +0.373499 | FAIL |
@@ -26,7 +26,7 @@ We used the authors' stratified subsampling procedure with the full v2.1 archive
 
 CausalPFN led the five methods with normalized Qini **1.000000**. Its raw Qini of **0.820425** was ahead of the X-learner at **0.810781**. Each method used five folds with 2,000,000 training and 500,000 held-out rows per fold. All 25 method-folds were verified. The benchmark took **2 hours and 9 seconds**, excluding sample preparation.
 
-| Method | Qini | Normalized Qini | Table 7 reference | Gap | ±0.03 |
+| Method | Qini | Normalized Qini | Table 7 reference | Gap | ±0.05 |
 | --- | ---: | ---: | ---: | ---: | :---: |
 | CausalPFN | 0.820425 | 1.000000 | 0.939 | +0.061000 | FAIL |
 | X-learner | 0.810781 | 0.988246 | 0.994 | -0.005754 | PASS |

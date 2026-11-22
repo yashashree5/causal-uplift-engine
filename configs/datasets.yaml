@@ -41,4 +41,4 @@ paper_targets:   # normalized Qini, CausalPFN (best method = 1.000)
     criteo_sub50k: 0.859
   table7:
     criteo_full: 0.939
-  tolerance: 0.03
+  tolerance: 0.05

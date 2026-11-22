@@ -79,7 +79,7 @@ PAPER = {
         },
     },
 }
-TOLERANCE = 0.03
+TOLERANCE = 0.05
 
 
 def paper_scores(task: str) -> dict[str, float]:

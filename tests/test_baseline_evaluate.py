@@ -42,6 +42,15 @@ def test_best_method_normalized_to_one(tmp_path):
     assert "Hill(1)" in to_markdown("hillstrom", table)
 
 
+@pytest.mark.parametrize(("normalized_score", "within_tolerance"), [(0.95, True), (0.9499, False)])
+def test_paper_tolerance_includes_boundary(tmp_path, monkeypatch, normalized_score, within_tolerance):
+    task = "hill_womens_vs_none"
+    _write_fake_predictions(tmp_path, task, ["s_learner"])
+    monkeypatch.setattr("baseline.evaluate.normalize_scores", lambda _: {"s_learner": normalized_score})
+
+    assert bool(score_task(tmp_path, task)["within_tolerance"].iloc[0]) is within_tolerance
+
+
 def test_incomplete_folds_are_skipped(tmp_path):
     _write_fake_predictions(tmp_path, "criteo_sub50k", ["causalpfn"])
     (tmp_path / "predictions" / "causalpfn" / "criteo_sub50k" / f"seed{SEED}_fold4.parquet").unlink()
