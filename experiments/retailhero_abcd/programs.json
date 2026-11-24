@@ -1,0 +1,73 @@
+{
+  "rules": {
+    "features": [
+      {
+        "op": "add",
+        "a": 0,
+        "b": 1
+      },
+      {
+        "op": "sub",
+        "a": 2,
+        "b": 3
+      },
+      {
+        "op": "mul",
+        "a": 0,
+        "b": 2
+      },
+      {
+        "op": "div",
+        "a": 1,
+        "b": 3
+      }
+    ]
+  },
+  "fields": [
+    "redeem_day",
+    "express_mean",
+    "express_total",
+    "points_month",
+    "spent_day",
+    "spent_after_redeem_day",
+    "n_tx",
+    "recency",
+    "span",
+    "qty_total",
+    "n_products",
+    "n_stores",
+    "amount_mean",
+    "amount_sd",
+    "age",
+    "male",
+    "female",
+    "unknown_gender"
+  ],
+  "generation": {
+    "status": "complete",
+    "reused": true
+  },
+  "design_sha256": "05966cbc1c30d45866ff918d0bcd9688e5623241f14cdaafc9537a8802023ce7",
+  "programs": [
+    [
+      "add",
+      0,
+      1
+    ],
+    [
+      "sub",
+      2,
+      3
+    ],
+    [
+      "mul",
+      0,
+      2
+    ],
+    [
+      "div",
+      1,
+      3
+    ]
+  ]
+}

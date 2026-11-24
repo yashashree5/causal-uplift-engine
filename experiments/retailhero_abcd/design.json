@@ -1,0 +1,22 @@
+{
+  "dataset": "X5 RetailHero",
+  "hosts": ["causalpfn", "ptonet"],
+  "baseline_columns": 6,
+  "component_columns": {"A": 16, "B": 1, "C": 1, "D": 4},
+  "core_configurations": [
+    "Original", "A", "B", "C", "D", "AB", "AC", "AD", "BC", "BD", "CD",
+    "ABC", "ABD", "ACD", "BCD", "ABCD"
+  ],
+  "formula_controls": ["D_random", "D_shuffled"],
+  "qwen": "Qwen3-8B",
+  "formula_source": "experiments/retailhero_abcd/programs.json",
+  "formula_sha256": "1efbd67f51dc30590ef8e58e7110482ec0422caca91b190db25029b9224e9486",
+  "host_seeds": {"causalpfn": [82718], "ptonet": [20261123, 20261124, 20261125]},
+  "outer_training_folds": 3,
+  "primary_reach": 0.30,
+  "secondary_reaches": [0.10, 0.20],
+  "primary_contrasts_per_host": [["ABCD", "Original"], ["D", "Original"], ["ABCD", "ABC"]],
+  "cross_host_contrast": ["validation_selected_ptonet", "causalpfn_Original"],
+  "primary_family": "Holm across seven 30-percent contrasts including the cross-host comparison",
+  "roster_sizes": {"development_train": 20000, "full_train": 140027, "validation": 20004, "evaluation": 40008}
+}

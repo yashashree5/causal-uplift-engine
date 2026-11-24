@@ -1,0 +1,2 @@
+# This source artifact is verified by its original byte-level SHA-256.
+programs.json -text whitespace=cr-at-eol
