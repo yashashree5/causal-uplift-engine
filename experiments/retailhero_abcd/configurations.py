@@ -6,7 +6,6 @@ from pathlib import Path
 
 import numpy as np
 
-
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
 DESIGN = json.loads((HERE / "design.json").read_text(encoding="utf-8"))
@@ -105,12 +104,16 @@ def assemble_configuration(config, baseline, components=None):
         for part in PARTS:
             value = np.asarray(values[part])
             if value.shape != (len(x[part]), width) or not np.isfinite(value).all():
-                raise ValueError(f"{part}: {component} must have {len(x[part])} rows and {width} finite columns")
+                raise ValueError(
+                    f"{part}: {component} must have {len(x[part])} rows and {width} finite columns"
+                )
             blocks[part].append(value)
     return {part: np.column_stack(parts) for part, parts in blocks.items()}
 
 
 if __name__ == "__main__":
     for name in DESIGN["core_configurations"] + DESIGN["formula_controls"]:
-        width = DESIGN["baseline_columns"] + sum(DESIGN["component_columns"][c] for c in selected_components(name))
+        width = DESIGN["baseline_columns"] + sum(
+            DESIGN["component_columns"][c] for c in selected_components(name)
+        )
         print(f"{name:12s} {width:2d} columns")

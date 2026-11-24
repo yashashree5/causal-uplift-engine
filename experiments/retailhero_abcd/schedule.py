@@ -1,9 +1,9 @@
 """Generate registered X5 feature banks and fit the requested model configurations."""
 import argparse
 import os
-from concurrent.futures import ThreadPoolExecutor
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from time import time
 
 from run import DESIGN, HERE, OUT, ROOT, read

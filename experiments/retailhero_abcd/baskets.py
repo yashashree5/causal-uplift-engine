@@ -5,7 +5,6 @@ from time import perf_counter
 
 import numpy as np
 import pandas as pd
-
 from run import HERE, OUT, PARTS, PREPARED, SEED, checked, cohort, gpu_lane, id_hash, read, save, sha, write
 
 RAW = PREPARED.parent / "data"
@@ -191,7 +190,8 @@ def run(name, probe):
              **{key: p.cpu().numpy() for key, p in model.state_dict().items()})
         meta.update(sha256=sha(folder / "values.npz"), state_sha256=sha(folder / "state.npz"))
     write(complete, meta)
-    print("A", "probe" if probe else "bank", len(fit), round(train_seconds, 2), round(score_seconds, 2), flush=True)
+    print("A", "probe" if probe else "bank", len(fit),
+          round(train_seconds, 2), round(score_seconds, 2), flush=True)
 
 
 if __name__ == "__main__":

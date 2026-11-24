@@ -6,7 +6,6 @@ from peft import LoraConfig, get_peft_model
 from torch.nn.functional import binary_cross_entropy_with_logits
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-
 CHECKPOINT = dict(
     directory="qwen3-8b-bnb4-1deaf68",
     revision="1deaf68f694c40dbce295da300851729d759b21a",
@@ -18,7 +17,9 @@ BATCH = 8
 CAP = 512
 ARM = ("The customer receives no promotional SMS.", "The customer receives a promotional SMS.")
 SYSTEM = "Assess a retail purchase using only the supplied history. Answer Yes or No."
-QUESTION = "Under this randomly assigned campaign scenario, will the customer make a purchase after the campaign?"
+QUESTION = (
+    "Under this randomly assigned campaign scenario, will the customer make a purchase after the campaign?"
+)
 
 
 def render(tokenizer, summary, sequence, mask, aliases, arm):
@@ -28,9 +29,12 @@ def render(tokenizer, summary, sequence, mask, aliases, arm):
     summary_text = ",".join(map(number, summary))
     purchases = ";".join(",".join(map(number, row)) for row in sequence[mask])
     content = (f"Before SMS cutoff 2019-03-19.\nSummary[{','.join(aliases)}]={summary_text}"
-               f"\nLast purchases [days_before_sms,amount,quantity,products]={purchases}\n{ARM[arm]}\n{QUESTION}")
+               f"\nLast purchases [days_before_sms,amount,quantity,products]={purchases}"
+               f"\n{ARM[arm]}\n{QUESTION}")
     messages = [dict(role="system", content=SYSTEM), dict(role="user", content=content)]
-    return tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True, enable_thinking=False)
+    return tokenizer.apply_chat_template(
+        messages, tokenize=False, add_generation_prompt=True, enable_thinking=False
+    )
 
 
 def load(path):
@@ -116,7 +120,9 @@ def epoch(body, head, optimizer, params, tokens, rows, factual_keys, y, pad_id):
         batch = rows[start:start+BATCH]
         optimizer.zero_grad(set_to_none=True)
         logits = batch_logits(body, head, [tokens[i] for i in factual_keys[batch]], pad_id)
-        loss = binary_cross_entropy_with_logits(logits, torch.as_tensor(y[batch], device="cuda", dtype=torch.float32))
+        loss = binary_cross_entropy_with_logits(
+            logits, torch.as_tensor(y[batch], device="cuda", dtype=torch.float32)
+        )
         if not torch.isfinite(loss):
             raise FloatingPointError("Nonfinite training loss")
         loss.backward()

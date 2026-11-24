@@ -3,7 +3,6 @@
 from itertools import combinations
 
 import numpy as np
-
 from configurations import DESIGN, PARTS, assemble_configuration
 
 
@@ -17,7 +16,7 @@ def main():
     components = {c: {p: np.full((12, width), i + 1, dtype=np.float32) for p in PARTS}
                   for i, (c, width) in enumerate((("A", 16), ("B", 1), ("C", 1)))}
     fixed = assemble_configuration("D", baseline)
-    for part, design in fixed.items():
+    for design in fixed.values():
         a, b, c, d = design[:, :4].T
         np.testing.assert_allclose(design[:, 6:], np.column_stack((a+b, c-d, a*c, b/(1+abs(d)))))
     assert fixed["validation"][0, 0] == np.mean(baseline["train"][:, 0])

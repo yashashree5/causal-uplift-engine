@@ -13,7 +13,6 @@ from time import perf_counter
 import numpy as np
 import torch
 
-
 ROOT = Path(__file__).resolve().parents[2]
 PTONET_SHA256 = "bca648c54010f663d08b2f660d4c6932e8d9a929fd555c29e2519ff160f880e3"
 CAUSALPFN_TREE_SHA256 = "560de57bc99055a145c551a10e8b1a136ced3d830e1293299010187baf6e73cc"
@@ -69,7 +68,9 @@ def make_ptonet(input_width):
     methods = {"__init__", "forward", "predict", "criterion"}
     definition = next(node for node in ast.parse(path.read_bytes()).body
                       if isinstance(node, ast.ClassDef) and node.name == "PTONet")
-    definition.body = [node for node in definition.body if isinstance(node, ast.FunctionDef) and node.name in methods]
+    definition.body = [
+        node for node in definition.body if isinstance(node, ast.FunctionDef) and node.name in methods
+    ]
     if {node.name for node in definition.body} != methods:
         raise ValueError("Incomplete PTONet definition")
     scope = {"torch": torch, "nn": torch.nn}
@@ -96,7 +97,7 @@ def predict_ptonet(model, x):
     model.eval()
     with torch.no_grad():
         pairs = [model.predict(chunk) for chunk in x.split(512)]
-    result = np.stack([torch.cat(arm).squeeze(-1).numpy() for arm in zip(*pairs)], axis=1)
+    result = np.stack([torch.cat(arm).squeeze(-1).numpy() for arm in zip(*pairs, strict=True)], axis=1)
     if not np.isfinite(result).all() or np.any((result < 0) | (result > 1)):
         raise FloatingPointError("Invalid predicted probability")
     return result
@@ -147,12 +148,15 @@ def peak_rss_bytes():
         data.cb = ctypes.sizeof(data)
         handle = ctypes.windll.kernel32.GetCurrentProcess
         handle.restype = ctypes.c_void_p
-        if not ctypes.windll.psapi.GetProcessMemoryInfo(ctypes.c_void_p(handle()), ctypes.byref(data), data.cb):
+        if not ctypes.windll.psapi.GetProcessMemoryInfo(
+            ctypes.c_void_p(handle()), ctypes.byref(data), data.cb
+        ):
             raise OSError("GetProcessMemoryInfo failed")
         peak = int(data.peak)
     else:
         import resource
-        peak = int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss) * (1 if sys.platform == "darwin" else 1024)
+        unit_bytes = 1 if sys.platform == "darwin" else 1024
+        peak = int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss) * unit_bytes
     if peak > 8 * 2**30:
         raise RuntimeError("Host process exceeded the 8 GiB memory budget")
     return peak

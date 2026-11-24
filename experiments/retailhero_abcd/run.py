@@ -1,24 +1,38 @@
 """Build and score registered X5 policies without opening evaluation labels."""
 
-import os
-
-for key in ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS", "NUMEXPR_NUM_THREADS"):
-    os.environ[key] = "1"
-
 import argparse
 import hashlib
 import json
+import os
 import random
 from contextlib import contextmanager
 from pathlib import Path
 from time import perf_counter, time
 
+# Set the numerical libraries' thread counts before importing NumPy or scikit-learn.
+os.environ.update({
+    "OMP_NUM_THREADS": "1",
+    "MKL_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "NUMEXPR_NUM_THREADS": "1",
+})
+
 import numpy as np
 from sklearn.model_selection import StratifiedKFold
+
 if __package__:
-    from .configurations import DESIGN, PARTS, assemble_configuration, formula_rules, formulas, impute, selected_components
+    from . import configurations
 else:
-    from configurations import DESIGN, PARTS, assemble_configuration, formula_rules, formulas, impute, selected_components
+    import configurations
+
+DESIGN = configurations.DESIGN
+PARTS = configurations.PARTS
+assemble_configuration = configurations.assemble_configuration
+selected_components = configurations.selected_components
+# These helpers are also imported by the component and evaluation scripts.
+formula_rules = configurations.formula_rules
+formulas = configurations.formulas
+impute = configurations.impute
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
@@ -297,7 +311,8 @@ def main():
     parser.add_argument("cohort", choices=("development", "full"))
     parser.add_argument("host", choices=DESIGN["hosts"])
     parser.add_argument("seed", type=int)
-    parser.add_argument("config", nargs="+", choices=(*DESIGN["core_configurations"], *DESIGN["formula_controls"], "cheap"))
+    options = (*DESIGN["core_configurations"], *DESIGN["formula_controls"], "cheap")
+    parser.add_argument("config", nargs="+", choices=options)
     args = parser.parse_args()
     if args.seed not in DESIGN["host_seeds"][args.host]:
         parser.error("Unregistered host seed")

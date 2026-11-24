@@ -13,11 +13,13 @@ os.environ["SKB_DATA_DIRECTORY"] = str(DEPS / "skrub_data")
 os.environ["MPLCONFIGDIR"] = str(DEPS / "matplotlib_config")
 os.environ["HF_HUB_OFFLINE"] = "1"
 
-from run import HERE, OUT, PARTS, SEED, checked, cohort, gpu_lane, id_hash, impute, read, save, sha, write
+# Import the numerical stack after installing the pinned search paths and offline settings.
+from run import HERE, OUT, PARTS, SEED, checked, cohort, gpu_lane, id_hash, impute, read, save, sha, write  # noqa: E402
 
-import numpy as np
-from sklearn.ensemble import HistGradientBoostingRegressor
-from sklearn.model_selection import StratifiedKFold
+# isort: split
+import numpy as np  # noqa: E402
+from sklearn.ensemble import HistGradientBoostingRegressor  # noqa: E402
+from sklearn.model_selection import StratifiedKFold  # noqa: E402
 
 MODEL = DEPS / "tabpfn-v3.5-20260909.safetensors"
 REVISION = "06bf2ba35c80a92a3b9abb436b99cf49e7a0365e"
@@ -42,7 +44,8 @@ def outcome_fit(clf, train, eligible, test, held_ids, seed, folder):
     arm_fit = context(eligible, y, seed)
     assert not np.intersect1d(ids[arm_fit], held_ids).size
     path, marker = folder / "probabilities.npz", folder / "complete.json"
-    identity = dict(fit_ids=id_hash(ids[arm_fit]), allowed_ids=id_hash(ids[eligible]), query_ids=id_hash(held_ids),
+    identity = dict(fit_ids=id_hash(ids[arm_fit]), allowed_ids=id_hash(ids[eligible]),
+                    query_ids=id_hash(held_ids),
                     revision=REVISION, context=CONTEXT, package="10.0.0", code=sha(HERE / "tabular.py"),
                     estimators=1, batch=BATCH)
     if marker.exists():
@@ -140,7 +143,8 @@ def run(name, probe):
         return
     settings = dict(sources=sources, checkpoint_sha256=DIGEST, checkpoint_revision=REVISION,
                     checkpoint=MODEL.name, tabpfn_version="10.0.0", context_budget=CONTEXT, estimators=1,
-                    batch=BATCH, fit_mode="fit_with_cache", sampling="seeded within each arm, stratified by purchase")
+                    batch=BATCH, fit_mode="fit_with_cache",
+                    sampling="seeded within each arm, stratified by purchase")
     with gpu_lane(f"{name}/B/{'probe' if probe else 'bank'}"):
         if probe:
             fit = np.flatnonzero((folds != 0) & (train["t"] == 1))

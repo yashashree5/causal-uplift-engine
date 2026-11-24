@@ -17,10 +17,13 @@ from peft import PeftModel
 from sklearn.model_selection import train_test_split
 from transformers import AutoTokenizer
 
+# isort: split
 import qwen_recipe as recipe
 
 HISTORY = ROOT / "outputs/retailhero_llm/history_inputs.npz"
-MODEL = Path(os.environ.get("X5_QWEN_MODEL_DIR", ROOT.parents[1] / "LLM-Models/huggingface" / recipe.CHECKPOINT["directory"]))
+MODEL = Path(os.environ.get(
+    "X5_QWEN_MODEL_DIR", ROOT.parents[1] / "LLM-Models/huggingface" / recipe.CHECKPOINT["directory"]
+))
 CHUNK = 1024
 
 
@@ -83,8 +86,9 @@ def tokenize(name, data, probe, identity):
     save(path, token_id=arrays, length=lengths, customer_id=ids, pad_id=np.array(tokenizer.pad_token_id))
     write(entry, dict(sources=identity, ids=id_hash(ids), sha256=sha(path), rows=len(ids),
                       prompts_with_oldest_baskets_removed=reduced, elapsed_seconds=perf_counter()-started,
-                      token_min=int(lengths.min()), token_max=int(lengths.max()), token_mean=float(lengths.mean()),
-                      system=recipe.SYSTEM, scenarios=recipe.ARM, question=recipe.QUESTION, batch=recipe.BATCH))
+                      token_min=int(lengths.min()), token_max=int(lengths.max()),
+                      token_mean=float(lengths.mean()), system=recipe.SYSTEM, scenarios=recipe.ARM,
+                      question=recipe.QUESTION, batch=recipe.BATCH))
 
 
 class TokenBank:
@@ -156,7 +160,8 @@ def score(body, head, tokens, rows, folder, stamp, reserve):
             probabilities = recipe.probabilities(logits)
             effects = np.diff(probabilities, axis=1).ravel().astype(np.float32)
             save(cache, customer_id=tokens.ids[selection], score=effects, probabilities=probabilities)
-            meta = dict(identity=stamp, sha256=sha(cache), seconds=seconds, rows=len(selection), **recipe.gpu_guard())
+            meta = dict(identity=stamp, sha256=sha(cache), seconds=seconds, rows=len(selection),
+                        **recipe.gpu_guard())
             write(marker, meta)
         out[pos] = effects
         timings.append(meta["seconds"])
@@ -190,7 +195,8 @@ def run(name, action):
     if probe:
         work = [("probe", np.arange(512), np.arange(512, 1536))]
     else:
-        work = [(f"outer_{fold}", np.flatnonzero(folds != fold), np.flatnonzero(folds == fold)) for fold in range(3)]
+        work = [(f"outer_{fold}", np.flatnonzero(folds != fold), np.flatnonzero(folds == fold))
+                for fold in range(3)]
         work.append(("full", np.arange(n_train), np.arange(n_train, len(tokens.ids))))
     settings = dict(model=recipe.CHECKPOINT, batch=recipe.BATCH, token_limit=recipe.CAP,
                     epochs=1, optimizer="AdamW", lr=1e-4, rank=8, dropout=0, weight_decay=0)
@@ -205,7 +211,9 @@ def run(name, action):
     with gpu_lane(f"{name}/C/{action}"):
         free, total = torch.cuda.mem_get_info()
         if free < 11*2**30:
-            raise RuntimeError(f"Qwen starts with {free/2**30:.2f} GiB free instead of the archived 11 GiB minimum")
+            raise RuntimeError(
+                f"Qwen starts with {free/2**30:.2f} GiB free instead of the archived 11 GiB minimum"
+            )
         torch.cuda.set_per_process_memory_fraction(10*2**30/total)
         torch.cuda.reset_peak_memory_stats()
         started = perf_counter()
@@ -218,17 +226,21 @@ def run(name, action):
             if LIMIT - gpu_seconds() <= reserve + 240.:
                 raise RuntimeError("Remaining GPU budget cannot start another Qwen adapter split")
             if len(permitted) > 2048:
-                fit, _ = train_test_split(permitted, train_size=2048, stratify=t[permitted], random_state=SEED+split)
+                fit, _ = train_test_split(permitted, train_size=2048, stratify=t[permitted],
+                                          random_state=SEED+split)
             else:
                 fit = permitted
             assert not np.intersect1d(fit, query).size
-            wrapper, record = train_adapter(model, body, head, tokens, t, y, fit, SEED+split, folder/tag, identity)
+            wrapper, record = train_adapter(
+                model, body, head, tokens, t, y, fit, SEED+split, folder/tag, identity
+            )
             stamp = dict(adapter=record["files"]["adapter/adapter_model.safetensors"]
                          if "adapter/adapter_model.safetensors" in record["files"]
                          else sha(folder/tag/"adapter/adapter_model.safetensors"), **identity)
             output[query], score_seconds = score(body, head, tokens, query, folder/tag, stamp, reserve)
-            logs.append(dict(split=tag, fit_hash=record["fit_id_hash"], fit_rows=len(fit), score_rows=len(query),
-                             permitted_id_hash=id_hash(tokens.ids[permitted]), score_id_hash=id_hash(tokens.ids[query]),
+            logs.append(dict(split=tag, fit_hash=record["fit_id_hash"], fit_rows=len(fit),
+                             score_rows=len(query), permitted_id_hash=id_hash(tokens.ids[permitted]),
+                             score_id_hash=id_hash(tokens.ids[query]),
                              fit_seconds=record["seconds"], score_seconds=score_seconds,
                              adapter_sha256=stamp["adapter"], **recipe.gpu_guard()))
             model = wrapper.unload()
@@ -236,7 +248,8 @@ def run(name, action):
             gc.collect()
             torch.cuda.empty_cache()
         safety = recipe.gpu_guard()
-    meta = dict(sources=paths, identity=identity, settings=settings, timings=logs, load_seconds=load_seconds, **safety)
+    meta = dict(sources=paths, identity=identity, settings=settings, timings=logs,
+                load_seconds=load_seconds, **safety)
     if not probe:
         assert np.isfinite(output).all()
         save(folder / "values.npz", train=output[:n_train, None],
