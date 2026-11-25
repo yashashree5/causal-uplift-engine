@@ -158,8 +158,7 @@ def ptonet(source, seed, bank, data):
     import torch
 
     train, validation, center, spread = source.scale(bank["train"], bank["validation"])
-    test = torch.from_numpy(np.ascontiguousarray((bank["test"] - center) / spread, dtype=np.float32))
-    for block in (train, validation, test):
+    for block in (train, validation):
         block.clamp_(-5, 5)
     t, y = [torch.as_tensor(data["train"][key], dtype=torch.float32) for key in ("t", "y")]
     val = data["validation"]
@@ -197,9 +196,14 @@ def ptonet(source, seed, bank, data):
         trials.append(dict(rate=rate, best_epoch=best_epoch, best_value=best_value, validation=trace))
     model.load_state_dict(winner)
     scores = {"validation": np.diff(source.predict_ptonet(model, validation), axis=1).ravel()}
-    started = perf_counter()
-    scores["test"] = np.diff(source.predict_ptonet(model, test), axis=1).ravel()
-    return scores, dict(**chosen, trials=trials, inference_seconds=perf_counter()-started,
+    inference_seconds = 0.
+    if "test" in bank:
+        test = torch.from_numpy(np.ascontiguousarray((bank["test"] - center) / spread, dtype=np.float32))
+        test.clamp_(-5, 5)
+        started = perf_counter()
+        scores["test"] = np.diff(source.predict_ptonet(model, test), axis=1).ravel()
+        inference_seconds = perf_counter() - started
+    return scores, dict(**chosen, trials=trials, inference_seconds=inference_seconds,
                         gpu_seconds=0., peak_rss_bytes=source.peak_rss_bytes()), {
         "center": center, "spread": spread, **{k: v.numpy() for k, v in winner.items()}}
 

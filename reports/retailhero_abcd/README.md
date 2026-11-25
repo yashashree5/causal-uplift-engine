@@ -7,6 +7,8 @@ At 30% reach, PTONet with all four components gained an estimated **8.19 increme
 | PTONet | 46.96 | 55.16 | +8.19 | [−2.06, +18.62] | 0.8594 |
 | CausalPFN | 50.61 | 51.02 | +0.41 | [−19.08, +18.07] | 1.0000 |
 
+In a follow-up at **30% validation reach**, adding Qwen’s no-SMS purchase forecast to PTONet C took the score from **71.75 to 63.48** (paired gain **−8.27**, 95% interval **[−21.59, +4.50]**). The [forecast follow-up](FORECAST.md) gives the three-seed results and the earlier frozen-forecast pilot.
+
 ## Reading the scores
 
 **Reach** is the fraction of evaluation customers a model would target. At 30% reach it ranks all 40,008 customers and selects the top 30%. Within this selected group, we subtract the no-SMS purchase rate from the SMS purchase rate and multiply by 1,000. A score of 55.16 means an estimated 55 additional buyers per 1,000 SMS sent. The score measures the *rate* of additional purchases, so a narrower budget can have a higher score while targeting fewer people. Gains are calculated before rounding the displayed scores. [Decision table](decision-table.csv)
