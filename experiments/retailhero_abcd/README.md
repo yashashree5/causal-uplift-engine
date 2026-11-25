@@ -57,16 +57,3 @@ python experiments/retailhero_abcd/schedule.py full --components A B C D
 ```
 
 The scheduler writes local feature banks, model files, predictions and timings under `outputs/retailhero_abcd/`. See the [experiment protocol](PROTOCOL.md) for the fold rules, feature dimensions and distinction between C and D.
-
-## Reproduce the PTONet forecast follow-up
-
-This validation-only experiment compares the archived PTONet Original and C fits with a new fit that adds Qwen's no-SMS purchase forecast to C. The new model has eight input columns. The three CPU fits reuse the original out-of-fold Qwen scores for training and the training-only adapter for validation. [Follow-up results and frozen-pilot context](../../reports/retailhero_abcd/FORECAST.md)
-
-Use the host Python environment and the pinned `X5_PTONET_SOURCE` described above. Set `--data-root` to the repository containing the prepared X5 cohort, the original C cache (including its chunk and adapter files), and the saved Original and C PTONet fits under `outputs/retailhero_abcd/full/models/`. If these files are in the current repository, use the default paths below.
-
-```console
-python experiments/retailhero_abcd/forecast_ablation.py
-python experiments/retailhero_abcd/forecast_comparison.py
-```
-
-The first command fits three PTONet seeds and saves their validation predictions under `outputs/retailhero_abcd/forecast_ablation/`. If all three completed fits are already available, run the second command to regenerate the per-seed scores and paired comparison in the `summary/` directory.

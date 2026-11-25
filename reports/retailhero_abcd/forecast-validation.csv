@@ -1,7 +1,0 @@
-policy,config,split,validation_rows,reach,selected,seeds,value,gain_vs_C,paired_low_95,paired_high_95
-mean_seed_value,Original,validation,20004,0.3,6001,3,64.39669968293595,,,
-mean_seed_value,C,validation,20004,0.3,6001,3,71.75011908368036,,,
-mean_seed_value,C_plus_no_sms,validation,20004,0.3,6001,3,63.484694131912676,-8.265424951767685,-21.589826020314295,4.4984013100044
-mean_prediction_ensemble,Original,validation,20004,0.3,6001,3,64.9718675556032,,,
-mean_prediction_ensemble,C,validation,20004,0.3,6001,3,69.91879226559128,,,
-mean_prediction_ensemble,C_plus_no_sms,validation,20004,0.3,6001,3,65.00210862929318,-4.916683636298103,-24.66511239266342,15.298755868346758

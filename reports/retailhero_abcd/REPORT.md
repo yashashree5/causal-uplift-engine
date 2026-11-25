@@ -145,4 +145,3 @@ C used the archived Qwen3 8B NF4 checkpoint, 2,048 factual prompts per LoRA adap
 - [Measured compute](compute.json)
 - [Roster choice and projections](budget.json)
 - [Evaluation and lock hashes](results.json)
-- [Follow-up on adding the no-SMS forecast to PTONet C at 30% validation reach](FORECAST.md)
