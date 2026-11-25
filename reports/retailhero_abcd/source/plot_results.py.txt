@@ -1,0 +1,172 @@
+"""Plot the locked X5 decision table. No model fitting or evaluation-label access."""
+
+import csv
+import json
+import math
+from pathlib import Path
+
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+from matplotlib.colors import LinearSegmentedColormap, Normalize
+from matplotlib.patches import Rectangle
+from matplotlib.transforms import blended_transform_factory
+
+
+HERE = Path(__file__).resolve().parent
+REPORT = HERE.parents[1] / "reports/retailhero_abcd"
+HOSTS = {"ptonet": "PTONet", "causalpfn": "CausalPFN"}
+REACHES = (0.1, 0.2, 0.3, 0.5)
+INK = "#162a38"
+MUTED = "#405968"
+
+
+def read_results(design):
+    configurations = design["core_configurations"] + design["formula_controls"]
+    with (REPORT / "decision-table.csv").open(encoding="utf-8-sig", newline="") as stream:
+        rows = list(csv.DictReader(stream))
+    data = {(r["host"], r["config"], float(r["reach"])): r for r in rows}
+    expected = {(host, config, reach) for host in HOSTS for config in configurations for reach in REACHES}
+    if set(data) != expected or len(rows) != len(expected):
+        raise ValueError("Decision table has missing, extra or repeated entries")
+    return data
+
+
+def score_grid(data, design):
+    fig = plt.figure(figsize=(10.5, 10.2))
+    fig.text(.045, .959, "X5 targeting scores by configuration", fontsize=23, weight="bold")
+    fig.text(.045, .927, "Additional buyers per 1,000 SMS sent to each model’s top-ranked customers.",
+             color=MUTED, fontsize=12)
+    fig.text(.045, .895, "A   Purchase-history embedding       B   TabPFN uplift score", fontsize=11)
+    fig.text(.045, .872, "C   Qwen3 8B LoRA uplift score        D   Four fixed purchase-history formulas", fontsize=11)
+    ax = fig.add_axes([.045, .116, .918, .728])
+    panel_width = len(REACHES)
+    panel_gap = .18
+    right_edge = len(HOSTS) * panel_width + (len(HOSTS) - 1) * panel_gap
+    ax.set_xlim(-1.63, right_edge+.01)
+    ax.set_ylim(18.6, -1.75)
+    ax.axis("off")
+    cmap = LinearSegmentedColormap.from_list("uplift", ["#edf4f3", "#bbdfd9", "#76b9b0", "#327f7a", "#074d50"])
+    scores = [float(row["challenger_value"]) for row in data.values()]
+    norm = Normalize(min(40, 5*math.floor(min(scores)/5)), max(115, 5*math.ceil(max(scores)/5)))
+    core = design["core_configurations"]
+    configs = core + design["formula_controls"]
+    names = {"D_random": "Random formulas", "D_shuffled": "Shuffled formulas"}
+    for host_idx, (key, host) in enumerate(HOSTS.items()):
+        x0 = host_idx * (panel_width + panel_gap)
+        ax.text(x0+panel_width/2, -1.23, host, ha="center", va="center", fontsize=15, weight="bold")
+        for j, reach in enumerate(REACHES):
+            ax.text(x0+j+.5, -.46, f"{reach:.0%}", va="center", ha="center", fontsize=11.5, color=MUTED)
+        for i, config in enumerate(configs):
+            y = i + (.48 if i >= len(core) else 0)
+            if host_idx == 0:
+                ax.text(-.10, y+.5, names.get(config, config), ha="right", va="center", fontsize=10.5,
+                        weight="bold" if config in ("Original", "ABCD") else "normal")
+            for j, reach in enumerate(REACHES):
+                val = float(data[key, config, reach]["challenger_value"])
+                color = cmap(norm(val))
+                # Switch text color by relative luminance so scores remain legible.
+                rgb = [v/12.92 if v <= .04045 else ((v+.055)/1.055)**2.4 for v in color[:3]]
+                lum = sum(c*v for c, v in zip((.2126, .7152, .0722), rgb))
+                x = x0+j
+                ax.add_patch(Rectangle((x, y), 1, 1, facecolor=color, edgecolor="white", linewidth=1.5))
+                ax.text(x+.5, y+.5, f"{val:.2f}", ha="center", va="center", fontsize=10.7,
+                        color="white" if lum < .18 else "#10262b")
+    ax.plot([-1.58, right_edge], [len(core)+.22]*2, lw=.8, color="#aabcbf")
+    legend = fig.add_axes([.045, .067, .30, .012])
+    fig.colorbar(plt.cm.ScalarMappable(norm=norm, cmap=cmap), cax=legend, orientation="horizontal",
+                 ticks=[norm.vmin, 65, 90, norm.vmax])
+    legend.tick_params(length=0, pad=3, labelsize=9)
+    legend.spines[:].set_visible(False)
+    fig.text(.385, .067, "Darker cells indicate more incremental buyers.", fontsize=10, color=MUTED)
+    fig.text(.045, .030, "40,008 evaluation customers. PTONet scores average three training seeds. Bottom two rows are formula controls.",
+             fontsize=9.5, color=MUTED)
+    fig.text(.045, .011, "30% was the primary budget. The 50% budget was added after the original evaluation.",
+             fontsize=9.5, color=MUTED)
+    return fig
+
+
+def full_model_gains(data, design):
+    winners = {
+        (host, reach): max(design["core_configurations"],
+                           key=lambda config: float(data[host, config, reach]["challenger_value"]))
+        for host in HOSTS for reach in REACHES
+    }
+    fig = plt.figure(figsize=(10, 11.1))
+    fig.text(.045, .949, "Original, full and best observed X5 models", fontsize=23, weight="bold")
+    fig.text(.045, .910, "Score = additional buyers per 1,000 SMS. Gain is measured against Original at the same reach.",
+             fontsize=11.5, color=MUTED)
+    ax = fig.add_axes([.406, .142, .335, .695])
+    table_coords = blended_transform_factory(fig.transFigure, ax.transData)
+    row_pitch = 3.45
+    group_offset = 1.12
+    group_span = (len(REACHES)-1)*row_pitch + 2
+    section_pitch = group_offset + group_span + 1.65
+    ax.set_ylim((len(HOSTS)-1)*section_pitch + group_offset + group_span + .65, -.42)
+    ax.set_yticks([])
+    ax.tick_params(length=0, pad=5, labelsize=9)
+    ax.spines[:].set_visible(False)
+    for x, label, align in [
+        (.045, "SMS reach", "left"), (.162, "Configuration", "left"), (.374, "Score", "right"),
+        (.406, "Gain vs. Original", "left"), (.764, "Gain  [95% interval]", "left"),
+    ]:
+        fig.text(x, .850, label, ha=align, fontsize=10.5, weight="bold", color=MUTED)
+
+    limits = [0.]
+    for host_index, (host, title) in enumerate(HOSTS.items()):
+        section = host_index * section_pitch
+        ax.text(.045, section, title, transform=table_coords, va="center", fontsize=14.5, weight="bold")
+        for reach_index, reach in enumerate(REACHES):
+            top = section + group_offset + reach_index * row_pitch
+            ax.text(.045, top + 1, f"Top {reach:.0%}", transform=table_coords, va="center", fontsize=11)
+            winner = winners[host, reach]
+            series = [
+                ("Original", "Original", "o", "#626f76"),
+                ("ABCD", "ABCD", "o", "#007264"),
+                (winner, f"Best · {winner}", "D", "#6646a2"),
+            ]
+            for offset, (config, label, marker, color) in enumerate(series):
+                y = top + offset
+                row = data[host, config, reach]
+                score, gain, lo, hi = (float(row[k]) for k in ("challenger_value", "gain", "low_95", "high_95"))
+                limits.extend((lo, hi))
+                ax.text(.162, y, label, transform=table_coords, va="center", fontsize=11, color=color)
+                ax.text(.374, y, f"{score:.2f}", transform=table_coords, va="center", ha="right", fontsize=11)
+                if config == "Original":
+                    ax.plot(0, y, marker=marker, markerfacecolor="white", markeredgecolor=color,
+                            markeredgewidth=1.4, markersize=6.1)
+                    interval = "0.00  (reference)"
+                else:
+                    ax.errorbar(gain, y, xerr=[[gain-lo], [hi-gain]], fmt=marker, capsize=3,
+                                linewidth=1.7, markersize=5.9, color=color)
+                    interval = f"{gain:+.2f}  [{lo:+.2f}, {hi:+.2f}]".replace("-", "−")
+                ax.text(.764, y, interval, transform=table_coords, va="center", fontsize=10.6, color=color)
+    step = 20
+    first_tick = math.floor(min(limits) / step) * step
+    last_tick = math.ceil(max(limits) / step) * step
+    ticks = range(first_tick, last_tick + 1, step)
+    ax.set_xticks(ticks)
+    ax.set_xlim(min(first_tick, min(limits)-3), max(max(limits)+3, last_tick))
+    for host_index in range(len(HOSTS)):
+        start = host_index * section_pitch + group_offset
+        ax.vlines(ticks, start-.40, start+group_span+.40, colors="#dde4e6", linewidth=.8, zorder=0)
+        ax.vlines(0, start-.40, start+group_span+.40, colors="#83959c", linewidth=1.3, zorder=0)
+    fig.text(.045, .083, "Best = highest evaluation score among the 16 core configurations at that budget. Formula controls are excluded.",
+             fontsize=10, color=MUTED)
+    fig.text(.045, .054, "Whiskers are paired 95% bootstrap intervals. Intervals for the best observed rows are unadjusted for selection.",
+             fontsize=10, color=MUTED)
+    fig.text(.045, .025, "30% was primary. The 10% and 20% budgets were secondary. The 50% budget was added after the original evaluation.",
+             fontsize=10, color=MUTED)
+    return fig
+
+
+if __name__ == "__main__":
+    plt.rcParams.update({"font.family": "sans-serif", "font.sans-serif": ["Segoe UI", "DejaVu Sans"],
+                         "text.color": INK, "axes.labelcolor": INK, "xtick.color": MUTED, "ytick.color": INK})
+    design = json.loads((HERE / "design.json").read_text())
+    data = read_results(design)
+    out = REPORT / "figures"
+    out.mkdir(exist_ok=True)
+    for name, fig in [("configuration_scores", score_grid(data, design)), ("full_model_gains", full_model_gains(data, design))]:
+        fig.savefig(out / f"{name}.png", dpi=210, facecolor="white")
+        plt.close(fig)

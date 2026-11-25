@@ -1,5 +1,7 @@
 # X5 configurations for PTONet and CausalPFN
 
+The [X5 results and review guide](../../reports/retailhero_abcd/README.md) includes both models' scores, paired uncertainty intervals and charts at 10%, 20%, 30% and 50% SMS reach.
+
 Use [configurations.py](configurations.py) to assemble the input matrix for any of the 16 configurations or either formula control. This part requires Python and NumPy. Run these commands from the repository root to list the configurations and verify the implementation on synthetic inputs.
 
 ```console

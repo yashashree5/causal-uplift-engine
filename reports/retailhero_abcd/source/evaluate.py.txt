@@ -1,0 +1,430 @@
+"""Lock X5 policies and evaluate them on the reused exploration cohort."""
+
+import argparse
+import csv
+from time import time
+
+import numpy as np
+from numba import njit, prange, set_num_threads
+from sklift.metrics import qini_auc_score, uplift_auc_score
+
+from run import CHEAP, DESIGN, OUT, PARTS, PREPARED, REPORT, checked, cohort, component_bank, formula_rules
+from run import id_hash, rank_policy, read, save, sha, write
+
+REACHES = (.10, .20, .30)
+REPS = 5000
+BOOTSTRAP_SEED = 20261123
+CONFIGS = [*DESIGN["core_configurations"], *DESIGN["formula_controls"]]
+
+
+def key(host, config):
+    return f"{host}_{config}"
+
+
+def model_paths(name, host, config):
+    return [OUT / name / "models" / f"{host}_{seed}_{config}" for seed in DESIGN["host_seeds"][host]]
+
+
+def model_rows(name, host, config, data):
+    records, scores = [], []
+    for folder in model_paths(name, host, config):
+        record = read(folder / "complete.json")
+        assert (record["cohort"], record["host"], record["config"]) == (name, host, config)
+        assert record["identity"]["roster"] == {part: id_hash(data[part]["id"]) for part in PARTS}
+        for source, digest in record["identity"]["source"].items():
+            checked(source, digest)
+        for filename, digest in record["files"].items():
+            checked(folder / filename, digest)
+        for component, digest in record["identity"]["features"].items():
+            checked(OUT / name / "features" / component / "complete.json", digest)
+        with np.load(folder / "predictions.npz", allow_pickle=False) as z:
+            np.testing.assert_array_equal(z["id_validation"], data["validation"]["id"])
+            np.testing.assert_array_equal(z["id_test"], data["test"]["id"])
+            scores.append(z["test"])
+        records.append(record)
+    return records, scores
+
+
+def compact(record):
+    omitted = {"identity", "files", "trials"}
+    return {k: v for k, v in record.items() if k not in omitted}
+
+
+def milestone():
+    name = "development"
+    data = cohort(name)
+    rows = {}
+    for host in DESIGN["hosts"]:
+        for config in CHEAP:
+            records, _ = model_rows(name, host, config, data)
+            rows[key(host, config)] = [compact(record) for record in records]
+    counts = {p: {"customers": len(data[p]["id"]), "arm_counts": np.bincount(data[p]["t"]).tolist()}
+              for p in ("train", "validation")}
+    counts["test"] = {"customers": len(data["test"]["id"])}
+    write(REPORT / "validation.json", dict(counts=counts, random_rules=formula_rules()[1], models=rows))
+    text = ["# X5 formula control validation", "", "Both hosts used 20,000 training customers "
+            "(9,896 SMS and 10,104 controls) and 20,004 validation customers (9,998 SMS and 10,006 controls). "
+            "The validation endpoint is incremental buyers per 1,000 SMS among the highest ranked 30%. "
+            "PTONet values average the three registered seeds.",
+            "", "| Host | Configuration | Validation value | Gain vs Original | Seed SD | Runtime sum, s | "
+            "GPU time, s | Peak RSS, GiB | Peak GPU reserved, GiB |",
+            "|---|---|---:|---:|---:|---:|---:|---:|---:|"]
+    for host in DESIGN["hosts"]:
+        original = np.mean([r["validation_value"] for r in rows[key(host, "Original")]])
+        for config in CHEAP:
+            records = rows[key(host, config)]
+            values = [r["validation_value"] for r in records]
+            value = np.mean(values)
+            sd = f"{np.std(values, ddof=1):.2f}" if len(values) > 1 else "—"
+            seconds = sum(r["runtime_seconds"] for r in records)
+            gpu_s = sum(r["gpu_seconds"] for r in records)
+            rss = max(r["peak_rss_bytes"] for r in records)/2**30
+            reserved = max(r.get("gpu_reserved_bytes", 0) for r in records)/2**30
+            text.append(f"| {host} | {config} | {value:.2f} | {value-original:+.2f} | {sd} | "
+                        f"{seconds:.1f} | {gpu_s:.1f} | {rss:.2f} | {reserved:.2f} |")
+    (REPORT / "VALIDATION.md").write_text("\n".join(text) + "\n", encoding="utf-8")
+    print("\n".join(text), flush=True)
+
+
+def audit_components(name, data, components):
+    train = data["train"]
+    partitions = {f"outer_{fold}": (train["id"][train["fold"] != fold],
+                                    train["id"][train["fold"] == fold]) for fold in range(3)}
+    partitions["full"] = (train["id"], np.concatenate([data[p]["id"] for p in ("validation", "test")]))
+    feature_root = OUT / name / "features"
+    audits = {}
+    for component in components:
+        component_bank(name, data, component)
+        base = feature_root / component
+        manifest = read(base / "complete.json")
+        if component == "A":
+            with np.load(OUT / "baskets.npz", allow_pickle=False) as bank:
+                ids = bank["customer_id"]
+            with np.load(PREPARED, allow_pickle=False) as z:
+                unlabeled = ids[~np.isin(ids, z["client_id"])]
+            fit = np.r_[train["id"], unlabeled]
+            assert not np.intersect1d(fit, partitions["full"][1]).size
+            assert len(fit) == manifest["fit_rows"] and id_hash(fit) == manifest["fit_id_hash"]
+            checked(base / "state.npz", manifest["state_sha256"])
+            audits[component] = dict(pretraining_fit_id_hash=id_hash(fit), fit_rows=len(fit))
+            continue
+        audits[component] = {}
+        for split, (allowed, recipient) in partitions.items():
+            if component == "C":
+                folder = base / split
+                adapter = read(folder / "adapter.json")
+                for filename, digest in adapter["files"].items():
+                    checked(folder / filename, digest)
+                with np.load(folder / "fit_ids.npz", allow_pickle=False) as z:
+                    fit_ids = z["customer_id"]
+                assert len(np.unique(fit_ids)) == 2048 and np.isin(fit_ids, allowed).all()
+                assert not np.intersect1d(fit_ids, recipient).size and id_hash(fit_ids) == adapter["fit_id_hash"]
+                predicted_ids = []
+                for marker in sorted(folder.glob("score_*.json")):
+                    cache = marker.with_suffix(".npz")
+                    chunk = read(marker)
+                    checked(cache, chunk["sha256"])
+                    with np.load(cache, allow_pickle=False) as z:
+                        predicted_ids.append(z["customer_id"])
+                        np.testing.assert_array_equal(z["score"], np.diff(z["probabilities"], axis=1).ravel().astype(np.float32))
+                np.testing.assert_array_equal(np.sort(np.concatenate(predicted_ids)), np.sort(recipient))
+            else:
+                folder = base / split
+                fold = manifest["folds"][split]
+                assert fold["fit_id_hash"] == id_hash(allowed) and fold["query_id_hash"] == id_hash(recipient)
+                checked(folder / "second_stage.joblib", fold["model_sha256"])
+                with np.load(folder / "doubly_robust.npz", allow_pickle=False) as z:
+                    np.testing.assert_array_equal(z["permitted_id"], allowed)
+                    np.testing.assert_array_equal(z["query_id"], recipient)
+                audited_inner = []
+                for inner in range(3):
+                    within = []
+                    for arm in (0, 1):
+                        member = folder / f"inner_{inner}" / f"arm_{arm}"
+                        entry = read(member / "complete.json")
+                        checked(member / "probabilities.npz", entry["sha256"])
+                        with np.load(member / "probabilities.npz", allow_pickle=False) as z:
+                            fit_ids, query_ids = z["fit_id"], z["id"]
+                        assert len(np.unique(fit_ids)) == entry["fit_rows"]
+                        assert np.isin(fit_ids, allowed).all() and np.isin(query_ids, allowed).all()
+                        assert not np.intersect1d(fit_ids, query_ids).size
+                        assert not np.intersect1d(fit_ids, recipient).size
+                        within.append(query_ids)
+                    np.testing.assert_array_equal(within[0], within[1])
+                    audited_inner.append(within[0])
+                np.testing.assert_array_equal(np.sort(np.concatenate(audited_inner)), np.sort(allowed))
+            audits[component][split] = dict(permitted_ids=id_hash(allowed), recipient_ids=id_hash(recipient),
+                                            permitted_rows=len(allowed), scored_rows=len(recipient))
+    return audits
+
+
+def lock(name):
+    root = OUT / name
+    budget = read(REPORT / "budget.json")
+    assert name == budget["selected"]
+    included = budget["components"]
+    data = cohort(name)
+    audits = audit_components(name, data, included)
+    scores, records, unavailable = {}, {}, {}
+    for host in DESIGN["hosts"]:
+        for config in CONFIGS:
+            missing = sorted(set(config).intersection("ABC").difference(included)) if config not in CHEAP else []
+            policy = key(host, config)
+            if missing:
+                unavailable[policy] = missing
+                continue
+            items, seed_scores = model_rows(name, host, config, data)
+            records[policy] = [compact(r) for r in items]
+            scores[policy] = np.stack(seed_scores)
+    available_pto = [config for config in DESIGN["core_configurations"] if key("ptonet", config) in scores]
+    ranking = sorted(available_pto, key=lambda config: (
+        -np.mean([r["validation_value"] for r in records[key("ptonet", config)]]),
+        0 if config == "Original" else len(config), CONFIGS.index(config)))
+    diagnostics = []
+    for component in ("B", "C"):
+        if component in included:
+            blocks, _ = component_bank(name, data, component)
+            policy = key("standalone", component)
+            scores[policy] = blocks["test"].T
+            diagnostics.append(policy)
+    evaluation_ids = data["test"]["id"]
+    for matrix in scores.values():
+        for score in matrix:
+            rank_policy(score, evaluation_ids)
+    archive = root / "locked_predictions.npz"
+    marker = root / "policies_locked.json"
+    if marker.exists():
+        raise FileExistsError(f"Use the existing lock at {marker}")
+    save(archive, row_id=evaluation_ids, **scores)
+    write(marker, dict(cohort=name, counts={p: len(data[p]["id"]) for p in PARTS}, predictions_sha256=sha(archive),
+                       locked_at=time(), evaluation_ids=id_hash(evaluation_ids), records=records,
+                       ptonet_validation_order=ranking, ptonet_selected=ranking[0],
+                       unavailable=unavailable, diagnostics=diagnostics, bootstrap_replicates=REPS, component_audit=audits,
+                       sources={str(p): sha(p) for p in (REPORT / "budget.json", OUT.parent.parent /
+                                "experiments/retailhero_abcd/evaluate.py")}))
+    print("Locked", len(records), "host policies and", len(diagnostics), "diagnostics.",
+          "Validation selected PTONet", ranking[0], flush=True)
+
+
+def csv_file(path, records):
+    with path.open("w", newline="", encoding="utf-8") as stream:
+        writer = csv.DictWriter(stream, fieldnames=list(dict.fromkeys(key for r in records for key in r)))
+        writer.writeheader()
+        writer.writerows(records)
+
+
+@njit(parallel=True)
+def bootstrap_values(counts, rankings, treatment, outcome, limits):
+    result = np.empty((len(counts), len(rankings), len(limits)), dtype=np.float64)
+    for replicate in prange(len(counts)):
+        weights = counts[replicate]
+        for policy in range(len(rankings)):
+            total = sms = buy_sms = buy_no_sms = position = 0
+            unused = 0
+            customer = 0
+            for j, limit in enumerate(limits):
+                while total < limit:
+                    if unused == 0:
+                        customer = rankings[policy, position]
+                        unused = weights[customer]
+                        position += 1
+                    step = min(limit-total, unused)
+                    total += step
+                    unused -= step
+                    if treatment[customer]:
+                        sms += step
+                        buy_sms += step*outcome[customer]
+                    else:
+                        buy_no_sms += step*outcome[customer]
+                result[replicate, policy, j] = 1000 * (buy_sms/sms - buy_no_sms/(total-sms))
+    return result
+
+
+def draw_counts(t, seed):
+    rng = np.random.default_rng(seed)
+    arms = [np.flatnonzero(t == arm) for arm in (0, 1)]
+    counts = np.zeros((REPS, len(t)), dtype=np.uint8)
+    for replicate in range(REPS):
+        for ids in arms:
+            weights = np.bincount(rng.integers(len(ids), size=len(ids)), minlength=len(ids))
+            assert weights.max() < 256
+            counts[replicate, ids] = weights
+    return counts
+
+
+def uncertainty(delta, bootstrap):
+    low, high = np.quantile(bootstrap, [.025, .975])
+    p = (1+np.count_nonzero(np.abs(bootstrap-delta) >= abs(delta))) / (len(bootstrap)+1)
+    return dict(gain=float(delta), low_95=float(low), high_95=float(high), p_centered=float(p))
+
+
+def holm(p_values):
+    p = np.asarray(p_values)
+    order = p.argsort(kind="stable")
+    adjusted = np.empty(len(p))
+    adjusted[order] = np.minimum(1, np.maximum.accumulate(p[order] * np.arange(len(p), 0, -1)))
+    return adjusted.tolist()
+
+
+def evaluate(name):
+    root = OUT / name
+    marker = root / "policies_locked.json"
+    locked = read(marker)
+    assert locked["cohort"] == name and locked["bootstrap_replicates"] == REPS
+    for source, digest in locked["sources"].items():
+        checked(source, digest)
+    archive = root / "locked_predictions.npz"
+    checked(archive, locked["predictions_sha256"])
+    with np.load(archive, allow_pickle=False) as z:
+        ids = z["row_id"]
+        policies = {p: z[p] for p in z.files if p != "row_id"}
+    assert id_hash(ids) == locked["evaluation_ids"]
+    labels = PREPARED.with_name("test_labels.npz")
+    digest = read(PREPARED.with_name("data_manifest.json"))["output_sha256"][labels.name]
+    checked(labels, digest)
+    with np.load(labels, allow_pickle=False) as z:
+        np.testing.assert_array_equal(z["client_id"], ids)
+        t, y = (z[k].astype(np.int32) for k in ("t", "y"))
+    set_num_threads(min(8, __import__("numba").config.NUMBA_NUM_THREADS))
+    assert set(t) == set(y) == {0, 1}
+    limits = np.array([round(q*len(ids)) for q in REACHES], dtype=np.int32)
+    details, rankings, groups = [], [], {}
+    for policy, matrix in policies.items():
+        group = []
+        for index, score in enumerate(matrix):
+            records = locked["records"].get(policy)
+            record = records[index] if records else {}
+            seed = record.get("seed")
+            ranking = rank_policy(score, ids)
+            qini, auuc = qini_auc_score(y, score, t), uplift_auc_score(y, score, t)
+            group.append(len(rankings))
+            rankings.append(ranking.astype(np.int32))
+            for reach, limit in zip(REACHES, limits):
+                index_set = ranking[:limit]
+                arm = t[index_set] == 1
+                treated = int(arm.sum())
+                control = int(limit-treated)
+                sms_buys, control_buys = int(y[index_set][arm].sum()), int(y[index_set][~arm].sum())
+                details.append(dict(policy=policy, seed=seed, reach=reach, selected=int(limit),
+                                    sms_count=treated, control_count=control, sms_buyers=sms_buys,
+                                    control_buyers=control_buys, value=1000*(sms_buys/treated-control_buys/control),
+                                    qini=float(qini), auuc=float(auuc)))
+        groups[policy] = group
+    rankings = np.stack(rankings)
+    observed = bootstrap_values(np.ones((1, len(ids)), dtype=np.uint8), rankings, t, y, limits)[0]
+    np.testing.assert_allclose(observed.ravel(), [row["value"] for row in details], rtol=0, atol=1e-12)
+    for policy, matrix in policies.items():
+        for j, ranking in enumerate(rankings[groups[policy]]):
+            # Replicates with one copy per customer must give exactly the original tie-broken order.
+            np.testing.assert_array_equal(ranking, rank_policy(matrix[j], ids))
+    print("Evaluating", len(rankings), "seed policies on", REPS, "common bootstrap samples", flush=True)
+    counts = draw_counts(t, BOOTSTRAP_SEED)
+    bootstrap = bootstrap_values(counts, rankings, t, y, limits)
+    point = {policy: observed[index].mean(0) for policy, index in groups.items()}
+    bs = {policy: bootstrap[:, index, :].mean(1) for policy, index in groups.items()}
+
+    def compare(left, right, family):
+        rows = []
+        for j, reach in enumerate(REACHES):
+            row = dict(challenger=left, reference=right, reach=reach,
+                       family=family if reach == .30 else "exploratory_secondary_reach")
+            if left in point and right in point:
+                row.update(challenger_value=float(point[left][j]), reference_value=float(point[right][j]),
+                           **uncertainty(point[left][j]-point[right][j], bs[left][:, j]-bs[right][:, j]))
+            else:
+                row["unavailable"] = True
+            rows.append(row)
+        return rows
+
+    primary = []
+    for host in DESIGN["hosts"]:
+        for left, right in DESIGN["primary_contrasts_per_host"]:
+            primary.extend(compare(key(host, left), key(host, right), "registered"))
+    selection = locked["ptonet_selected"]
+    cross_host_family = "registered" if len(locked["ptonet_validation_order"]) == 16 else "exploratory_subset_selection"
+    primary.extend(compare(key("ptonet", selection), key("causalpfn", "Original"), cross_host_family))
+    tests = [r for r in primary if r["reach"] == .30]
+    assert len(tests) == 7
+    p_values = [r.get("p_centered", 1.) if r["family"] == "registered" else 1. for r in tests]
+    complete_family = all(r["family"] == "registered" and "p_centered" in r for r in tests)
+    for row, adjusted in zip(tests, holm(p_values)):
+        if row["family"] == "registered" and "p_centered" in row:
+            row["p_holm_7" if complete_family else "p_holm_7_upper_bound"] = adjusted
+
+    comparisons = primary.copy()
+    for host in DESIGN["hosts"]:
+        for other in ("BCD", "ACD", "ABD"):
+            comparisons.extend(compare(key(host, "ABCD"), key(host, other), "exploratory_ablation"))
+        for config in CONFIGS:
+            if config != "Original":
+                comparisons.extend(compare(key(host, config), key(host, "Original"), "exploratory_grid"))
+        for control in DESIGN["formula_controls"]:
+            comparisons.extend(compare(key(host, "D"), key(host, control), "exploratory_formula_control"))
+        for diagnostic in locked["diagnostics"]:
+            comparisons.extend(compare(diagnostic, key(host, "Original"), "exploratory_standalone"))
+    factorial = []
+    for host in DESIGN["hosts"]:
+        for component in "ABCD":
+            pairs = [(key(host, mask), key(host, mask.replace(component, "") or "Original"))
+                     for mask in DESIGN["core_configurations"] if mask != "Original" and component in mask]
+            pairs = [(left, right) for left, right in pairs if left in point and right in point]
+            if not pairs:
+                continue
+            for j, reach in enumerate(REACHES):
+                delta = np.mean([point[left][j]-point[right][j] for left, right in pairs])
+                values = np.mean([bs[left][:, j]-bs[right][:, j] for left, right in pairs], axis=0)
+                factorial.append(dict(host=host, component=component, reach=reach, matched_pairs=len(pairs),
+                                      **uncertainty(delta, values)))
+    decision = []
+    p_lookup = {(r["challenger"], r["reference"], r["reach"]): r for r in tests}
+    for host in DESIGN["hosts"]:
+        for config in CONFIGS:
+            policy, ref = key(host, config), key(host, "Original")
+            records = locked["records"].get(policy, [])
+            comparisons_to_original = compare(policy, ref, "exploratory_grid")
+            for j, row in enumerate(comparisons_to_original):
+                item = dict(host=host, config=config, input_columns=records[0]["input_width"] if records else None,
+                            **row)
+                if policy in point:
+                    indices = groups[policy]
+                    item.update(
+                        seed_sd=float(observed[indices, j].std(ddof=1)) if len(indices) > 1 else None,
+                        validation_mean=float(np.mean([r["validation_value"] for r in records])),
+                        gpu_hours=sum(r["gpu_seconds"] for r in records)/3600,
+                        sum_wall_seconds=sum(r["runtime_seconds"] for r in records),
+                        peak_gpu_reserved_gib=max(r.get("gpu_reserved_bytes", 0) for r in records)/2**30,
+                        peak_rss_gib=max(r["peak_rss_bytes"] for r in records)/2**30)
+                if policy == ref:
+                    item["p_centered"] = None
+                    item["family"] = "baseline"
+                else:
+                    item.update(p_lookup.get((policy, ref, row["reach"]), {}))
+                decision.append(item)
+    REPORT.mkdir(parents=True, exist_ok=True)
+    csv_file(REPORT / "decision-table.csv", decision)
+    csv_file(REPORT / "comparisons.csv", comparisons)
+    csv_file(REPORT / "seed-policies.csv", details)
+    if factorial:
+        csv_file(REPORT / "factorial-effects.csv", factorial)
+    save(root / "bootstrap_results.npz", **bs)
+    write(REPORT / "results.json", dict(cohort=name, reused_exploratory_evaluation=True,
+          lock_sha256=sha(marker), labels_sha256=digest, counts=locked["counts"],
+          evaluation_arm_counts=np.bincount(t).tolist(), selection=selection,
+          ptonet_validation_order=locked["ptonet_validation_order"], registered=tests,
+          complete_holm_family=complete_family, missing=locked["unavailable"], bootstrap_seed=BOOTSTRAP_SEED,
+          bootstrap_replicates=REPS, reaches=REACHES,
+          diagnostic_values={k: point[k].tolist() for k in locked["diagnostics"]}))
+    print("Wrote evaluation results to", REPORT, flush=True)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("action", choices=("milestone", "lock", "evaluate"))
+    parser.add_argument("--cohort", choices=("development", "full"), default="development")
+    args = parser.parse_args()
+    if args.action == "milestone":
+        milestone()
+    elif args.action == "lock":
+        lock(args.cohort)
+    else:
+        evaluate(args.cohort)

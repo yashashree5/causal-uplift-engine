@@ -1,0 +1,200 @@
+{
+  "total_gpu_hours": 8.991444666584332,
+  "GPU_hour_limit": 12,
+  "entries": [
+    {
+      "label": "causalpfn_82718_D_random",
+      "start": 1795501797.464701,
+      "end": 1795501981.9597685
+    },
+    {
+      "label": "causalpfn_82718_D_shuffled",
+      "start": 1795499114.4496706,
+      "end": 1795499243.6070447
+    },
+    {
+      "label": "causalpfn_82718_ABC",
+      "start": 1795530124.5134742,
+      "end": 1795530433.4874618
+    },
+    {
+      "label": "causalpfn_82718_A",
+      "start": 1795500007.0226564,
+      "end": 1795500318.1594765
+    },
+    {
+      "label": "causalpfn_82718_ABCD",
+      "start": 1795530953.9231017,
+      "end": 1795531273.5202622
+    },
+    {
+      "label": "causalpfn_82718_D_random",
+      "start": 1795498984.4737887,
+      "end": 1795499113.9073095
+    },
+    {
+      "label": "causalpfn_82718_Original",
+      "start": 1795498338.7196677,
+      "end": 1795498467.5394728
+    },
+    {
+      "label": "causalpfn_82718_ACD",
+      "start": 1795530434.7648907,
+      "end": 1795530753.052819
+    },
+    {
+      "label": "development/A/probe",
+      "start": 1795499351.4770522,
+      "end": 1795499352.7411246
+    },
+    {
+      "label": "causalpfn_82718_D",
+      "start": 1795500500.9341247,
+      "end": 1795500685.2175782
+    },
+    {
+      "label": "full/B/bank",
+      "start": 1795499740.7811968,
+      "end": 1795499808.8799758
+    },
+    {
+      "label": "causalpfn_82718_ABD",
+      "start": 1795501485.386696,
+      "end": 1795501796.3874292
+    },
+    {
+      "label": "causalpfn_82718_AC",
+      "start": 1795529423.223217,
+      "end": 1795529736.3909059
+    },
+    {
+      "label": "causalpfn_82718_CD",
+      "start": 1795529928.3639696,
+      "end": 1795530124.0341904
+    },
+    {
+      "label": "development/C/probe",
+      "start": 1795499356.757184,
+      "end": 1795499533.8361106
+    },
+    {
+      "label": "causalpfn_82718_BCD",
+      "start": 1795530754.2820709,
+      "end": 1795530952.614914
+    },
+    {
+      "label": "development/B/probe",
+      "start": 1795499541.5951395,
+      "end": 1795499543.0782802
+    },
+    {
+      "label": "full/A/bank",
+      "start": 1795499558.7152536,
+      "end": 1795499596.259331
+    },
+    {
+      "label": "causalpfn_82718_AB",
+      "start": 1795500685.5796487,
+      "end": 1795500987.120357
+    },
+    {
+      "label": "causalpfn_82718_B",
+      "start": 1795500318.4400933,
+      "end": 1795500499.8454297
+    },
+    {
+      "label": "causalpfn_82718_BD",
+      "start": 1795501296.966467,
+      "end": 1795501484.1718476
+    },
+    {
+      "label": "causalpfn_82718_AD",
+      "start": 1795500988.3088825,
+      "end": 1795501295.844495
+    },
+    {
+      "label": "causalpfn_82718_Original",
+      "start": 1795498725.8980558,
+      "end": 1795498854.3059585
+    },
+    {
+      "label": "full/C/build",
+      "start": 1795502178.093141,
+      "end": 1795529220.767836
+    },
+    {
+      "label": "causalpfn_82718_D_shuffled",
+      "start": 1795501983.0588927,
+      "end": 1795502172.862341
+    },
+    {
+      "label": "causalpfn_82718_Original",
+      "start": 1795499811.8845031,
+      "end": 1795500006.6908824
+    },
+    {
+      "label": "causalpfn_82718_C",
+      "start": 1795529224.2646978,
+      "end": 1795529422.7831686
+    },
+    {
+      "label": "causalpfn_82718_BC",
+      "start": 1795529736.75397,
+      "end": 1795529927.1665046
+    },
+    {
+      "label": "causalpfn_82718_D",
+      "start": 1795498854.8582528,
+      "end": 1795498983.9229841
+    }
+  ],
+  "components": [
+    {
+      "stage": "D",
+      "charged_gpu_hours": 0.0,
+      "serving_seconds_per_1000": 0.004052569485925752,
+      "serving_device": "CPU",
+      "serving_scope": "formulas including six-significant-digit input rounding"
+    },
+    {
+      "stage": "A",
+      "charged_gpu_hours": 0.010428910387886896,
+      "peak_gpu_reserved_gib": 0.208984375,
+      "serving_seconds_per_1000": 0.00570187513388017,
+      "serving_device": "GPU",
+      "serving_scope": "embedding forward pass with prepared basket tensors",
+      "manifest_sha256": "6bf147565054dbfbe2e758d03971b017c7618eda32f439478d50faba79e12a8b"
+    },
+    {
+      "stage": "B",
+      "charged_gpu_hours": 0.01891632748974694,
+      "peak_gpu_reserved_gib": 1.28125,
+      "serving_seconds_per_1000": 0.002591295075326406,
+      "serving_device": "CPU",
+      "serving_scope": "DR regressor with prepared six-field inputs",
+      "manifest_sha256": "837ce7fdd061f07558a803c79f33b03122756a9dd51c701b124b918f57747c5b"
+    },
+    {
+      "stage": "C",
+      "charged_gpu_hours": 7.511854081948599,
+      "peak_gpu_reserved_gib": 9.9921875,
+      "serving_seconds_per_1000": 132.2946227537896,
+      "serving_device": "GPU",
+      "serving_scope": "two-scenario forward passes with tokenized prompts",
+      "manifest_sha256": "b59917dfb118fa5b40d1899cf06dbf4115d788fbcbce6f9918ba1c63f6914e75"
+    },
+    {
+      "stage": "causalpfn Original",
+      "serving_seconds_per_1000": 2.8119020045995256,
+      "serving_device": "GPU",
+      "serving_scope": "original host prediction per seed"
+    },
+    {
+      "stage": "ptonet Original",
+      "serving_seconds_per_1000": 0.0020216665011517456,
+      "serving_device": "CPU",
+      "serving_scope": "original host prediction per seed"
+    }
+  ],
+  "serving_measurements_exclude_first_load": true
+}

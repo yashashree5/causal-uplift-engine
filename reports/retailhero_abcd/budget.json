@@ -1,0 +1,137 @@
+{
+  "selected": "full",
+  "components": [
+    "A",
+    "B",
+    "C"
+  ],
+  "unavailable": [],
+  "decision": "Full factorial fits on the 140,027-customer roster",
+  "already_charged_seconds": 824.7094738483429,
+  "gpu_hour_limit": 12.0,
+  "headroom_factor": 1.15,
+  "configurations": [
+    "Original",
+    "A",
+    "B",
+    "C",
+    "D",
+    "AB",
+    "AC",
+    "AD",
+    "BC",
+    "BD",
+    "CD",
+    "ABC",
+    "ABD",
+    "ACD",
+    "BCD",
+    "ABCD",
+    "D_random",
+    "D_shuffled"
+  ],
+  "candidates": {
+    "full": {
+      "training": 140027,
+      "validation": 20004,
+      "evaluation": 40008,
+      "configurations_per_host": 18,
+      "new_causalpfn_models": 18,
+      "ptonet_seeds": 3,
+      "ptonet_cpu_seconds": 2793.410953793136,
+      "work": {
+        "A": {
+          "pretraining_customers": 340150,
+          "passes": 3,
+          "scored_customers": 200039
+        },
+        "B": {
+          "nuisance_prediction_rows": 840162,
+          "arm_fits": 24,
+          "context": 2048
+        },
+        "C": {
+          "adapter_fits": 4,
+          "observed_training_prompts": 8192,
+          "scoring_customers": 200039,
+          "scoring_prompts": 400078
+        }
+      },
+      "projected_gpu_seconds": {
+        "host_gpu": 3332.407557602157,
+        "A": 83.12288213425747,
+        "B": 173.01237231395817,
+        "C": 26181.266928824592
+      },
+      "total_including_headroom_seconds": 35059.99067585455
+    },
+    "development": {
+      "training": 20000,
+      "validation": 20004,
+      "evaluation": 40008,
+      "configurations_per_host": 18,
+      "new_causalpfn_models": 14,
+      "ptonet_seeds": 3,
+      "ptonet_cpu_seconds": 310.31914760172367,
+      "work": {
+        "A": {
+          "pretraining_customers": 220123,
+          "passes": 3,
+          "scored_customers": 80012
+        },
+        "B": {
+          "nuisance_prediction_rows": 120000,
+          "arm_fits": 24,
+          "context": 2048
+        },
+        "C": {
+          "adapter_fits": 4,
+          "observed_training_prompts": 8192,
+          "scoring_customers": 80012,
+          "scoring_prompts": 160024
+        }
+      },
+      "projected_gpu_seconds": {
+        "host_gpu": 1813.7547077999916,
+        "A": 53.27781449912791,
+        "B": 49.75784158411261,
+        "C": 10850.46562212976
+      },
+      "total_including_headroom_seconds": 15507.053857763281
+    }
+  },
+  "chosen": {
+    "training": 140027,
+    "validation": 20004,
+    "evaluation": 40008,
+    "configurations_per_host": 18,
+    "new_causalpfn_models": 18,
+    "ptonet_seeds": 3,
+    "ptonet_cpu_seconds": 2793.410953793136,
+    "work": {
+      "A": {
+        "pretraining_customers": 340150,
+        "passes": 3,
+        "scored_customers": 200039
+      },
+      "B": {
+        "nuisance_prediction_rows": 840162,
+        "arm_fits": 24,
+        "context": 2048
+      },
+      "C": {
+        "adapter_fits": 4,
+        "observed_training_prompts": 8192,
+        "scoring_customers": 200039,
+        "scoring_prompts": 400078
+      }
+    },
+    "projected_gpu_seconds": {
+      "host_gpu": 3332.407557602157,
+      "A": 83.12288213425747,
+      "B": 173.01237231395817,
+      "C": 26181.266928824592
+    },
+    "total_including_headroom_seconds": 35059.99067585455
+  }
+}

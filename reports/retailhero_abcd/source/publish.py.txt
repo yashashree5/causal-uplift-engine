@@ -1,0 +1,254 @@
+"""Summarize locked X5 results, estimands and measured compute."""
+
+import csv
+from time import perf_counter
+
+import numpy as np
+
+from run import DESIGN, HERE, OUT, REPORT, cohort, formula_rules, formulas, impute, load_module, read, sha, write
+
+
+def rows(path):
+    with path.open(encoding="utf-8", newline="") as stream:
+        return list(csv.DictReader(stream))
+
+
+def number(value, signed=False):
+    return "—" if value in ("", None) else format(float(value), "+.2f" if signed else ".2f")
+
+
+def p_value(value):
+    return "—" if value in ("", None) else f"{float(value):.4f}"
+
+
+def interval(row):
+    if row.get("low_95") in ("", None):
+        return "—"
+    return f"[{number(row['low_95'], True)}, {number(row['high_95'], True)}]"
+
+
+def compute(name, components):
+    ledgers = [read(p) for p in (OUT / "gpu_ledger").glob("*.json")]
+    assert all(item["end"] is not None for item in ledgers)
+    seconds = {}
+    for item in ledgers:
+        seconds[item["label"]] = seconds.get(item["label"], 0.) + item["end"]-item["start"]
+    used = sum(seconds.values())
+    data = cohort(name)
+    history = load_module("abcd_publish_history", HERE.parent / "retailhero_llm/history.py")
+    rules, _ = formula_rules()
+    fit = history.rounded(data["train"]["x"][:, :4])
+    center = impute(fit, np.full((1, 4), np.nan))[0]
+    test = data["test"]["x"][:, :4]
+    started = perf_counter()
+    for _ in range(5):
+        rounded = history.rounded(test)
+        d = formulas(np.where(np.isfinite(rounded), rounded, center).astype(np.float32), rules)
+        assert np.isfinite(d).all()
+    d_time = (perf_counter()-started)*1000/(5*len(test))
+    costs = [dict(stage="D", charged_gpu_hours=0., serving_seconds_per_1000=d_time, serving_device="CPU",
+                  serving_scope="formulas including six-significant-digit input rounding")]
+    for c in components:
+        path = OUT / name / "features" / c / "complete.json"
+        meta = read(path)
+        if c == "A":
+            serving = meta["score_seconds"] * 1000 / meta["score_rows"]
+            peak = meta["reserved_bytes"]
+            scope = "embedding forward pass with prepared basket tensors"
+        elif c == "B":
+            full = meta["folds"]["full"]
+            serving = full["serving_seconds"] * 1000 / full["query_rows"]
+            peak = max(item["reserved_bytes"] for fold in meta["folds"].values() for item in fold["inner"])
+            scope = "DR regressor with prepared six-field inputs"
+        else:
+            full = meta["timings"][-1]
+            serving = full["score_seconds"] * 1000 / full["score_rows"]
+            peak = meta["gpu_reserved_bytes"]
+            scope = "two-scenario forward passes with tokenized prompts"
+        costs.append(dict(stage=c, charged_gpu_hours=seconds.get(f"{name}/{c}/bank",
+                          seconds.get(f"{name}/{c}/build", 0.))/3600,
+                          peak_gpu_reserved_gib=peak/2**30, serving_seconds_per_1000=serving,
+                          serving_device="CPU" if c == "B" else "GPU", serving_scope=scope,
+                          manifest_path=str(path), manifest_sha256=sha(path)))
+    lock = read(OUT / name / "policies_locked.json")
+    for host in DESIGN["hosts"]:
+        original = lock["records"][f"{host}_Original"]
+        query = lock["counts"]["test"]
+        if host == "causalpfn":
+            query += lock["counts"]["validation"]
+        serving = sum(x["inference_seconds"] for x in original) * 1000 / (len(original)*query)
+        costs.append(dict(stage=host + " Original", serving_seconds_per_1000=serving,
+                          serving_device="GPU" if host == "causalpfn" else "CPU",
+                          serving_scope="original host prediction per seed"))
+    write(REPORT / "compute.json", dict(total_gpu_hours=used/3600, GPU_hour_limit=12,
+          entries=ledgers, components=costs, serving_measurements_exclude_first_load=True))
+    return used/3600, costs
+
+
+def describe(row):
+    if row.get("unavailable"):
+        return "Unavailable."
+    gain, low, high = (float(row[key]) for key in ("gain", "low_95", "high_95"))
+    adjusted = row.get("p_holm_7", row.get("p_holm_7_upper_bound"))
+    if low > 0 and adjusted is not None and adjusted < .05:
+        return f"Supported gain of {number(gain, True)}."
+    if high < 0 and adjusted is not None and adjusted < .05:
+        return f"Supported decline of {number(gain, True)}."
+    direction = "gain" if gain > 0 else "decline"
+    return f"Estimated {direction} of {abs(gain):.2f}, with no adjusted statistical support."
+
+
+def main():
+    result, budget = (read(REPORT / p) for p in ("results.json", "budget.json"))
+    name = result["cohort"]
+    compute_path = REPORT / "compute.json"
+    if compute_path.exists():
+        measured = read(compute_path)
+        hours, costs = measured["total_gpu_hours"], measured["components"]
+    else:
+        hours, costs = compute(name, budget["components"])
+    table = rows(REPORT / "decision-table.csv")
+    comparisons = rows(REPORT / "comparisons.csv")
+    reaches = result["reaches"]
+    has_half = .50 in reaches
+    lookup = {(r["challenger"], float(r["reach"])): r for r in table}
+    item = {r["challenger"]: r for r in table if r["reach"] == "0.3"}
+    counts = result["counts"]
+    registered_supported = sum(r.get("low_95", 0.) > 0 and r.get("p_holm_7", 1.) < .05
+                               for r in result["registered"])
+    txt = [
+        "# X5 RetailHero factorial evaluation", "",
+        f"Both hosts used {counts['train']:,} training customers, {counts['validation']:,} validation customers, "
+        f"and {counts['test']:,} evaluation customers. The reused evaluation cohort is exploratory. "
+        "The primary value is incremental buyers per 1,000 SMS at 30% reach. The prespecified secondary reaches "
+        "are 10% and 20%."
+        + (" The 50% reach was requested after review of the original results and is exploratory." if has_half else ""),
+        "",
+        ("None of the seven registered comparisons supported a gain at 30% reach." if registered_supported == 0
+         else f"{registered_supported} registered comparisons supported a gain at 30% reach."), "",
+        f"The run used **{hours:.3f} GPU-hours of the 12-hour budget**, including probes and retries. "
+        f"The measured forecast with headroom was {budget['chosen']['total_including_headroom_seconds']/3600:.2f} GPU-hours. "
+        f"Validation selected **PTONet {result['selection']}**. "
+        "Evaluation outcomes were opened after prediction and selection hashes were locked.", "",
+        "## Registered decisions", "",
+        "| Challenger | Reference | Challenger value | Reference value | Gain | Paired 95% interval | Holm p | Decision |",
+        "|---|---|---:|---:|---:|---|---:|---|",
+    ]
+    for row in result["registered"]:
+        p = row.get("p_holm_7", row.get("p_holm_7_upper_bound"))
+        txt.append(f"| {row['challenger']} | {row['reference']} | {number(row.get('challenger_value'))} | "
+                   f"{number(row.get('reference_value'))} | {number(row.get('gain'), True)} | {interval(row)} | "
+                   f"{p_value(p)} | {describe(row)} |")
+    if not result["complete_holm_family"]:
+        txt.extend(["", "The registered family was incomplete. Adjusted values shown are Holm-seven upper bounds "
+                    "with unobserved primary tests assigned p=1. The cross-host contrast is exploratory when "
+                    "validation selection covered only a subset of the registered PTONet grid."])
+    txt.extend(["", "## Removing one feature block from ABCD", "",
+                "| Host | Removed component | ABCD value | Reduced value | ABCD gain | Paired 95% interval |",
+                "|---|---|---:|---:|---:|---|"])
+    for host in DESIGN["hosts"]:
+        for c in "ABCD":
+            reduced = "ABCD".replace(c, "")
+            row = next(r for r in comparisons if r["challenger"] == f"{host}_ABCD"
+                       and r["reference"] == f"{host}_{reduced}" and r["reach"] == "0.3")
+            txt.append(f"| {host} | {c} | {number(row.get('challenger_value'))} | "
+                       f"{number(row.get('reference_value'))} | {number(row.get('gain'), True)} | {interval(row)} |")
+    txt.extend(["", "The A, B and C removal contrasts are exploratory. Each contrast concerns the complete feature "
+                "block and its inputs.", "",
+                "## Average effect of adding each component", "",
+                "| Host | Component | Matched configuration pairs | Mean gain at 30% | Paired 95% interval |",
+                "|---|---|---:|---:|---|"])
+    factorial_path = REPORT / "factorial-effects.csv"
+    if factorial_path.exists():
+        for effect in rows(factorial_path):
+            if effect["reach"] == "0.3":
+                txt.append(f"| {effect['host']} | {effect['component']} | {effect['matched_pairs']} | "
+                           f"{number(effect['gain'], True)} | {interval(effect)} |")
+    txt.extend(["", "These exploratory estimates average matched configuration gains across backgrounds with the "
+                "other components held fixed.", "",
+                "## Full grid and formula controls", "",
+                "| Host | Configuration | " + " | ".join(f"{q:.0%} value" for q in reaches) +
+                " | 30% gain vs Original | Paired 95% interval | "
+                "30% seed SD | Host GPU-hours |",
+                "|---|---|" + "---:|" * len(reaches) + "---:|---|---:|---:|"])
+    for policy, row in item.items():
+        if not row["gpu_hours"]:
+            txt.append(f"| {row['host']} | {row['config']} |" + " — |" * (len(reaches) + 4))
+            continue
+        scores = " | ".join(number(lookup[policy, q]["challenger_value"]) for q in reaches)
+        txt.append(f"| {row['host']} | {row['config']} | {scores} | {number(row['gain'], True)} | "
+                   f"{interval(row)} | {number(row['seed_sd'])} | {float(row['gpu_hours']):.4f} |")
+    txt.extend(["", "PTONet ranks and scores each seed policy individually and averages the resulting policy values. "
+                "The seed-level file includes SMS and control customer counts, buyers, normalized Qini and normalized "
+                "AUUC. Bootstrap replicates draw customers with replacement within treatment arm and rank each "
+                "resample with customer-ID tie breaking. All policies use the same 5,000 draws.", "",
+                "The random control treats subtraction as ordered. Its subtraction reverses the archived subtraction, "
+                "retaining that component’s information up to sign. The shuffled block permutes rows jointly within "
+                "each partition. These are exploratory controls.", "",
+                "| Host | Reference control | D gain at 30% | Paired 95% interval |",
+                "|---|---|---:|---|"])
+    for row in comparisons:
+        if row["family"] == "exploratory_formula_control" and row["reach"] == "0.3":
+            host = row["challenger"].split("_", 1)[0]
+            control = row["reference"].split("_", 1)[1]
+            txt.append(f"| {host} | {control} | {number(row['gain'], True)} | {interval(row)} |")
+    if has_half:
+        selected = round(.50 * counts["test"])
+        txt.extend(["", "## Post hoc comparison at 50% reach", "",
+                    f"Each policy ranks the same evaluation customers and selects {selected:,} for SMS. "
+                    "Scores are incremental buyers per 1,000 SMS sent. The archived rankings and validation selection "
+                    "were fixed before this budget was requested.", "",
+                    "| Model | Configuration | Score | Gain vs Original | Paired 95% interval for gain |",
+                    "|---|---|---:|---:|---|"])
+        for host, title in (("ptonet", "PTONet"), ("causalpfn", "CausalPFN")):
+            core = [lookup[f"{host}_{config}", .50] for config in DESIGN["core_configurations"]]
+            available = [row for row in core if row.get("challenger_value") not in (None, "")]
+            if not available:
+                continue
+            winner = max(available, key=lambda row: float(row["challenger_value"]))
+            for config in dict.fromkeys(("Original", "ABCD", winner["config"])):
+                row = lookup[f"{host}_{config}", .50]
+                label = config + (" (highest observed)" if config == winner["config"] else "")
+                ci = "Reference" if config == "Original" else interval(row)
+                txt.append(f"| {title} | {label} | {number(row.get('challenger_value'))} | "
+                           f"{number(row.get('gain'), True)} | {ci} |")
+        txt.extend(["", "Highest observed refers to the largest evaluation score among the available core "
+                    "configurations. The paired intervals are pointwise and do not account for choosing that maximum. "
+                    "[Reproduce the 50% analysis](../../experiments/retailhero_abcd/add_top50.py)"])
+    txt.extend(["", "## Compute and incremental scoring cost", "",
+                "| Stage | Shared build GPU-hours | Seconds per 1,000 customers | Device | Scope |",
+                "|---|---:|---:|---|---|"])
+    for record in costs:
+        build = "—" if "charged_gpu_hours" not in record else f"{record['charged_gpu_hours']:.4f}"
+        txt.append(f"| {record['stage']} | {build} | {record['serving_seconds_per_1000']:.3f} | "
+                   f"{record['serving_device']} | {record['serving_scope']} |")
+    if "B" in budget["components"]:
+        txt.extend(["", "B used one frozen TabPFN-3.5 estimator per outcome arm with a deterministic "
+                    "2,048-customer context and empirical SMS probabilities within the fitting folds. "
+                    "The public competition documentation describes the treatment flag. "
+                    "[X5 data documentation](https://ods.ai/competitions/x5-retailhero-uplift-modeling/data)"])
+    if "C" in budget["components"]:
+        txt.extend(["", "C used the archived Qwen3 8B NF4 checkpoint, 2,048 factual prompts per LoRA adapter, "
+                    "and inference batches of eight. All prompts fit the 512-token cap with the archived "
+                    "18 summaries and up to eight baskets."])
+    if result["diagnostic_values"]:
+        txt.extend(["", "## Standalone feature diagnostics", ""])
+        for policy, values in result["diagnostic_values"].items():
+            scores = ", ".join(f"{value:.2f} at {reach:.0%}" for reach, value in zip(reaches, values, strict=True))
+            txt.append(f"- {policy.removeprefix('standalone_')} scored {scores} reach.")
+    txt.extend(["", "## Artifacts", "",
+                "- [Validation milestone](VALIDATION.md)",
+                "- [Decision table by configuration and reach](decision-table.csv)",
+                "- [Registered and exploratory paired contrasts](comparisons.csv)",
+                "- [Marginal factorial effects](factorial-effects.csv)",
+                "- [Per-seed policies and arm counts](seed-policies.csv)",
+                "- [Measured compute](compute.json)",
+                "- [Roster choice and projections](budget.json)",
+                "- [Evaluation and lock hashes](results.json)"])
+    report = REPORT / "REPORT.md"
+    report.write_text("\n".join(txt)+"\n", encoding="utf-8")
+    print(report, flush=True)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,94 @@
+"""Extend the locked X5 evaluation to 50% reach after the original study."""
+
+import csv
+import shutil
+from pathlib import Path
+from tempfile import TemporaryDirectory
+
+import numpy as np
+
+import evaluate as original
+
+
+EXTRA_REACH = .50
+TABLES = ("decision-table.csv", "comparisons.csv", "seed-policies.csv", "factorial-effects.csv")
+
+
+def read_table(path):
+    with path.open(encoding="utf-8", newline="") as stream:
+        return list(csv.DictReader(stream))
+
+
+def extend():
+    published = original.REPORT
+    result_path = published / "results.json"
+    previous = original.read(result_path)
+    name = previous["cohort"]
+    fit_output = original.OUT / name
+    original_reaches = tuple(original.REACHES)
+    extended_reaches = original_reaches + (EXTRA_REACH,)
+    if tuple(previous["reaches"]) not in (original_reaches, extended_reaches):
+        raise ValueError("Unexpected existing reach grid")
+    original.checked(fit_output / "policies_locked.json", previous["lock_sha256"])
+
+    # Run the historical evaluator against byte-identical locked inputs in a new output
+    # directory. Its source and the model selection remain covered by the original lock.
+    with TemporaryDirectory(prefix="top50-", dir=original.OUT) as temp:
+        staging = Path(temp)
+        staged_run = staging / name
+        staged_run.mkdir()
+        for filename in ("policies_locked.json", "locked_predictions.npz"):
+            shutil.copyfile(fit_output / filename, staged_run / filename)
+        staged_report = staging / "report"
+        saved_paths = original.OUT, original.REPORT, original.REACHES
+        try:
+            original.OUT, original.REPORT, original.REACHES = staging, staged_report, extended_reaches
+            original.evaluate(name)
+        finally:
+            original.OUT, original.REPORT, original.REACHES = saved_paths
+
+        new = original.read(staged_report / "results.json")
+        for key, value in previous.items():
+            if key not in ("reaches", "diagnostic_values", "post_hoc_reaches"):
+                assert new[key] == value, f"Changed result metadata: {key}"
+        for key, values in previous["diagnostic_values"].items():
+            assert new["diagnostic_values"][key][:len(values)] == values, key
+        assert new["reaches"] == list(extended_reaches)
+        new["post_hoc_reaches"] = [EXTRA_REACH]
+        original.write(staged_report / "results.json", new)
+
+        for filename in TABLES:
+            staged_file = staged_report / filename
+            rows = read_table(staged_file)
+            old_rows = read_table(published / filename)
+            unchanged = [r for r in rows if float(r["reach"]) in original_reaches]
+            expected = [r for r in old_rows if float(r["reach"]) in original_reaches]
+            assert unchanged == expected, filename
+            extra = [r for r in rows if float(r["reach"]) == EXTRA_REACH]
+            assert len(extra) == sum(float(r["reach"]) == .30 for r in rows), filename
+            for row in extra:
+                if row.get("family") == "exploratory_secondary_reach":
+                    row["family"] = "post_hoc_reach"
+                if "p_holm_7" in row:
+                    assert not row["p_holm_7"], "Correction belongs to the registered 30% family"
+            if any(float(r["reach"]) == EXTRA_REACH for r in old_rows):
+                assert rows == old_rows, f"Previous extension differs: {filename}"
+            original.csv_file(staged_file, rows)
+
+        bs_file = "bootstrap_results.npz"
+        with np.load(fit_output / bs_file) as old_bs, np.load(staged_run / bs_file) as new_bs:
+            assert set(old_bs.files) == set(new_bs.files)
+            for policy in old_bs.files:
+                old, updated = old_bs[policy], new_bs[policy]
+                assert updated.shape == (original.REPS, len(extended_reaches)) and np.isfinite(updated).all()
+                np.testing.assert_array_equal(old, updated[:, :old.shape[1]], err_msg=policy)
+
+        for filename in TABLES:
+            (staged_report / filename).replace(published / filename)
+        (staged_run / bs_file).replace(fit_output / bs_file)
+        (staged_report / "results.json").replace(result_path)
+    print("Added post hoc 50% reach. All old rows, bootstrap draws and seven registered results matched.")
+
+
+if __name__ == "__main__":
+    extend()

@@ -1,0 +1,325 @@
+{
+  "counts": {
+    "train": {
+      "customers": 20000,
+      "arm_counts": [
+        10104,
+        9896
+      ]
+    },
+    "validation": {
+      "customers": 20004,
+      "arm_counts": [
+        10006,
+        9998
+      ]
+    },
+    "test": {
+      "customers": 40008
+    }
+  },
+  "random_rules": [
+    [
+      "add",
+      1,
+      3
+    ],
+    [
+      "sub",
+      3,
+      2
+    ],
+    [
+      "mul",
+      1,
+      3
+    ],
+    [
+      "div",
+      1,
+      0
+    ]
+  ],
+  "models": {
+    "causalpfn_Original": [
+      {
+        "cohort": "development",
+        "host": "causalpfn",
+        "seed": 82718,
+        "config": "Original",
+        "validation_value": 70.05919857315578,
+        "runtime_seconds": 128.52137670002412,
+        "tune_s": 0.0,
+        "train_s": 2.9529182999394834,
+        "infer_s": 125.23420549998991,
+        "gpu_reserved_bytes": 186646528,
+        "gpu_allocated_bytes": 167716352,
+        "train_rows": 20000,
+        "input_width": 6,
+        "max_context_length": 50000,
+        "max_query_length": 1023,
+        "gpu_seconds": 128.1871237999294,
+        "inference_seconds": 125.23420549998991,
+        "peak_rss_bytes": 3826692096,
+        "implementation_snapshot_sha256": "c89fd7ef287e852d47c4191be083d369c2fde338a1d3e045d98a6a51a2996139"
+      }
+    ],
+    "causalpfn_D": [
+      {
+        "cohort": "development",
+        "host": "causalpfn",
+        "seed": 82718,
+        "config": "D",
+        "validation_value": 55.941982619668984,
+        "runtime_seconds": 129.17711610009428,
+        "tune_s": 0.0,
+        "train_s": 3.897722900030203,
+        "infer_s": 125.13218680000864,
+        "gpu_reserved_bytes": 201326592,
+        "gpu_allocated_bytes": 168417280,
+        "train_rows": 20000,
+        "input_width": 10,
+        "max_context_length": 50000,
+        "max_query_length": 1023,
+        "gpu_seconds": 129.02990970003884,
+        "inference_seconds": 125.13218680000864,
+        "peak_rss_bytes": 4193050624,
+        "implementation_snapshot_sha256": "c89fd7ef287e852d47c4191be083d369c2fde338a1d3e045d98a6a51a2996139"
+      }
+    ],
+    "causalpfn_D_random": [
+      {
+        "cohort": "development",
+        "host": "causalpfn",
+        "seed": 82718,
+        "config": "D_random",
+        "validation_value": 51.10520931381834,
+        "runtime_seconds": 129.545060299919,
+        "tune_s": 0.0,
+        "train_s": 3.8573722000001,
+        "infer_s": 125.54169159999583,
+        "gpu_reserved_bytes": 201326592,
+        "gpu_allocated_bytes": 169291776,
+        "train_rows": 20000,
+        "input_width": 10,
+        "max_context_length": 50000,
+        "max_query_length": 1023,
+        "gpu_seconds": 129.39906379999593,
+        "inference_seconds": 125.54169159999583,
+        "peak_rss_bytes": 4194103296,
+        "implementation_snapshot_sha256": "c89fd7ef287e852d47c4191be083d369c2fde338a1d3e045d98a6a51a2996139"
+      }
+    ],
+    "causalpfn_D_shuffled": [
+      {
+        "cohort": "development",
+        "host": "causalpfn",
+        "seed": 82718,
+        "config": "D_shuffled",
+        "validation_value": 53.50260981296784,
+        "runtime_seconds": 129.28026240004692,
+        "tune_s": 0.0,
+        "train_s": 4.01221610000357,
+        "infer_s": 125.11235549999401,
+        "gpu_reserved_bytes": 201326592,
+        "gpu_allocated_bytes": 168926208,
+        "train_rows": 20000,
+        "input_width": 10,
+        "max_context_length": 50000,
+        "max_query_length": 1023,
+        "gpu_seconds": 129.12457159999758,
+        "inference_seconds": 125.11235549999401,
+        "peak_rss_bytes": 4194201600,
+        "implementation_snapshot_sha256": "c89fd7ef287e852d47c4191be083d369c2fde338a1d3e045d98a6a51a2996139"
+      }
+    ],
+    "ptonet_Original": [
+      {
+        "cohort": "development",
+        "host": "ptonet",
+        "seed": 20261123,
+        "config": "Original",
+        "validation_value": 74.48334669721135,
+        "runtime_seconds": 9.323393600061536,
+        "rate": 0.01,
+        "epoch": 23,
+        "inference_seconds": 0.04757980001159012,
+        "gpu_seconds": 0.0,
+        "peak_rss_bytes": 548438016,
+        "input_width": 6,
+        "implementation_snapshot_sha256": "c89fd7ef287e852d47c4191be083d369c2fde338a1d3e045d98a6a51a2996139"
+      },
+      {
+        "cohort": "development",
+        "host": "ptonet",
+        "seed": 20261124,
+        "config": "Original",
+        "validation_value": 78.3086347019547,
+        "runtime_seconds": 5.296091600088403,
+        "rate": 0.1,
+        "epoch": 5,
+        "inference_seconds": 0.04415900004096329,
+        "gpu_seconds": 0.0,
+        "peak_rss_bytes": 546160640,
+        "input_width": 6,
+        "implementation_snapshot_sha256": "c89fd7ef287e852d47c4191be083d369c2fde338a1d3e045d98a6a51a2996139"
+      },
+      {
+        "cohort": "development",
+        "host": "ptonet",
+        "seed": 20261125,
+        "config": "Original",
+        "validation_value": 84.30504759731893,
+        "runtime_seconds": 7.546168199973181,
+        "rate": 0.01,
+        "epoch": 14,
+        "inference_seconds": 0.04680869996082038,
+        "gpu_seconds": 0.0,
+        "peak_rss_bytes": 548990976,
+        "input_width": 6,
+        "implementation_snapshot_sha256": "c89fd7ef287e852d47c4191be083d369c2fde338a1d3e045d98a6a51a2996139"
+      }
+    ],
+    "ptonet_D": [
+      {
+        "cohort": "development",
+        "host": "ptonet",
+        "seed": 20261123,
+        "config": "D",
+        "validation_value": 72.55128553732737,
+        "runtime_seconds": 6.100178999942727,
+        "rate": 0.01,
+        "epoch": 16,
+        "inference_seconds": 0.04763389995787293,
+        "gpu_seconds": 0.0,
+        "peak_rss_bytes": 570630144,
+        "input_width": 10,
+        "implementation_snapshot_sha256": "c89fd7ef287e852d47c4191be083d369c2fde338a1d3e045d98a6a51a2996139"
+      },
+      {
+        "cohort": "development",
+        "host": "ptonet",
+        "seed": 20261124,
+        "config": "D",
+        "validation_value": 66.80149665957525,
+        "runtime_seconds": 8.092712600016966,
+        "rate": 0.01,
+        "epoch": 19,
+        "inference_seconds": 0.04737150005530566,
+        "gpu_seconds": 0.0,
+        "peak_rss_bytes": 569864192,
+        "input_width": 10,
+        "implementation_snapshot_sha256": "c89fd7ef287e852d47c4191be083d369c2fde338a1d3e045d98a6a51a2996139"
+      },
+      {
+        "cohort": "development",
+        "host": "ptonet",
+        "seed": 20261125,
+        "config": "D",
+        "validation_value": 72.01993577632115,
+        "runtime_seconds": 5.764284800039604,
+        "rate": 0.01,
+        "epoch": 14,
+        "inference_seconds": 0.048803400015458465,
+        "gpu_seconds": 0.0,
+        "peak_rss_bytes": 572628992,
+        "input_width": 10,
+        "implementation_snapshot_sha256": "c89fd7ef287e852d47c4191be083d369c2fde338a1d3e045d98a6a51a2996139"
+      }
+    ],
+    "ptonet_D_random": [
+      {
+        "cohort": "development",
+        "host": "ptonet",
+        "seed": 20261123,
+        "config": "D_random",
+        "validation_value": 71.9245708877927,
+        "runtime_seconds": 7.0784271999727935,
+        "rate": 0.01,
+        "epoch": 14,
+        "inference_seconds": 0.04750610003247857,
+        "gpu_seconds": 0.0,
+        "peak_rss_bytes": 573235200,
+        "input_width": 10,
+        "implementation_snapshot_sha256": "c89fd7ef287e852d47c4191be083d369c2fde338a1d3e045d98a6a51a2996139"
+      },
+      {
+        "cohort": "development",
+        "host": "ptonet",
+        "seed": 20261124,
+        "config": "D_random",
+        "validation_value": 75.06337044104944,
+        "runtime_seconds": 7.4124755000229925,
+        "rate": 0.01,
+        "epoch": 13,
+        "inference_seconds": 0.04809529997874051,
+        "gpu_seconds": 0.0,
+        "peak_rss_bytes": 571789312,
+        "input_width": 10,
+        "implementation_snapshot_sha256": "c89fd7ef287e852d47c4191be083d369c2fde338a1d3e045d98a6a51a2996139"
+      },
+      {
+        "cohort": "development",
+        "host": "ptonet",
+        "seed": 20261125,
+        "config": "D_random",
+        "validation_value": 67.74224219187519,
+        "runtime_seconds": 5.311115200049244,
+        "rate": 0.01,
+        "epoch": 9,
+        "inference_seconds": 0.04874949995428324,
+        "gpu_seconds": 0.0,
+        "peak_rss_bytes": 573726720,
+        "input_width": 10,
+        "implementation_snapshot_sha256": "c89fd7ef287e852d47c4191be083d369c2fde338a1d3e045d98a6a51a2996139"
+      }
+    ],
+    "ptonet_D_shuffled": [
+      {
+        "cohort": "development",
+        "host": "ptonet",
+        "seed": 20261123,
+        "config": "D_shuffled",
+        "validation_value": 73.39526886306768,
+        "runtime_seconds": 6.02049430005718,
+        "rate": 0.01,
+        "epoch": 10,
+        "inference_seconds": 0.04946619994007051,
+        "gpu_seconds": 0.0,
+        "peak_rss_bytes": 574283776,
+        "input_width": 10,
+        "implementation_snapshot_sha256": "c89fd7ef287e852d47c4191be083d369c2fde338a1d3e045d98a6a51a2996139"
+      },
+      {
+        "cohort": "development",
+        "host": "ptonet",
+        "seed": 20261124,
+        "config": "D_shuffled",
+        "validation_value": 62.332922721487606,
+        "runtime_seconds": 4.846928400103934,
+        "rate": 0.01,
+        "epoch": 4,
+        "inference_seconds": 0.046489300089888275,
+        "gpu_seconds": 0.0,
+        "peak_rss_bytes": 571834368,
+        "input_width": 10,
+        "implementation_snapshot_sha256": "c89fd7ef287e852d47c4191be083d369c2fde338a1d3e045d98a6a51a2996139"
+      },
+      {
+        "cohort": "development",
+        "host": "ptonet",
+        "seed": 20261125,
+        "config": "D_shuffled",
+        "validation_value": 66.51442334927744,
+        "runtime_seconds": 4.5491517999907956,
+        "rate": 0.01,
+        "epoch": 5,
+        "inference_seconds": 0.04717009991873056,
+        "gpu_seconds": 0.0,
+        "peak_rss_bytes": 573726720,
+        "input_width": 10,
+        "implementation_snapshot_sha256": "c89fd7ef287e852d47c4191be083d369c2fde338a1d3e045d98a6a51a2996139"
+      }
+    ]
+  }
+}

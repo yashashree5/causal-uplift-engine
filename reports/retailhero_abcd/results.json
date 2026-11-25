@@ -1,0 +1,154 @@
+{
+  "cohort": "full",
+  "reused_exploratory_evaluation": true,
+  "lock_sha256": "0fd01be213479ab016e6940c5f70176b4f99f9a5e099a8e143f2be4e456b1128",
+  "labels_sha256": "cb297824ff0df5139b85a2f4e29f57cc2a5f211a58689d3475462b0abd0f3178",
+  "counts": {
+    "train": 140027,
+    "validation": 20004,
+    "test": 40008
+  },
+  "evaluation_arm_counts": [
+    20012,
+    19996
+  ],
+  "selection": "A",
+  "ptonet_validation_order": [
+    "A",
+    "C",
+    "ACD",
+    "AB",
+    "ABC",
+    "AD",
+    "B",
+    "ABD",
+    "AC",
+    "ABCD",
+    "CD",
+    "D",
+    "BCD",
+    "BD",
+    "BC",
+    "Original"
+  ],
+  "registered": [
+    {
+      "challenger": "causalpfn_ABCD",
+      "reference": "causalpfn_Original",
+      "reach": 0.3,
+      "family": "registered",
+      "challenger_value": 51.02233811169121,
+      "reference_value": 50.60824834093069,
+      "gain": 0.4140897707605191,
+      "low_95": -19.077418412009223,
+      "high_95": 18.071693245139855,
+      "p_centered": 0.9664067186562687,
+      "p_holm_7": 1.0
+    },
+    {
+      "challenger": "causalpfn_D",
+      "reference": "causalpfn_Original",
+      "reach": 0.3,
+      "family": "registered",
+      "challenger_value": 56.39468062397934,
+      "reference_value": 50.60824834093069,
+      "gain": 5.786432283048647,
+      "low_95": -10.894348623196267,
+      "high_95": 21.053617321049536,
+      "p_centered": 0.47290541891621674,
+      "p_holm_7": 1.0
+    },
+    {
+      "challenger": "causalpfn_ABCD",
+      "reference": "causalpfn_ABC",
+      "reach": 0.3,
+      "family": "registered",
+      "challenger_value": 51.02233811169121,
+      "reference_value": 56.17230071739754,
+      "gain": -5.149962605706328,
+      "low_95": -21.569430136390334,
+      "high_95": 11.011760784795639,
+      "p_centered": 0.5256948610277944,
+      "p_holm_7": 1.0
+    },
+    {
+      "challenger": "ptonet_ABCD",
+      "reference": "ptonet_Original",
+      "reach": 0.3,
+      "family": "registered",
+      "challenger_value": 55.158657334853956,
+      "reference_value": 46.96471409409396,
+      "gain": 8.19394324076,
+      "low_95": -2.058479217605088,
+      "high_95": 18.62082363988165,
+      "p_centered": 0.1227754449110178,
+      "p_holm_7": 0.8594281143771246
+    },
+    {
+      "challenger": "ptonet_D",
+      "reference": "ptonet_Original",
+      "reach": 0.3,
+      "family": "registered",
+      "challenger_value": 47.9103675482099,
+      "reference_value": 46.96471409409396,
+      "gain": 0.9456534541159414,
+      "low_95": -8.124708062246919,
+      "high_95": 9.70920468439658,
+      "p_centered": 0.8344331133773245,
+      "p_holm_7": 1.0
+    },
+    {
+      "challenger": "ptonet_ABCD",
+      "reference": "ptonet_ABC",
+      "reach": 0.3,
+      "family": "registered",
+      "challenger_value": 55.158657334853956,
+      "reference_value": 55.816134364205794,
+      "gain": -0.6574770293518384,
+      "low_95": -10.84844873656538,
+      "high_95": 9.755949547166695,
+      "p_centered": 0.9006198760247951,
+      "p_holm_7": 1.0
+    },
+    {
+      "challenger": "ptonet_A",
+      "reference": "causalpfn_Original",
+      "reach": 0.3,
+      "family": "registered",
+      "challenger_value": 52.560343426324685,
+      "reference_value": 50.60824834093069,
+      "gain": 1.9520950853939922,
+      "low_95": -14.17713801019295,
+      "high_95": 16.90058472016198,
+      "p_centered": 0.8004399120175965,
+      "p_holm_7": 1.0
+    }
+  ],
+  "complete_holm_family": true,
+  "missing": {},
+  "bootstrap_seed": 20261123,
+  "bootstrap_replicates": 5000,
+  "reaches": [
+    0.1,
+    0.2,
+    0.3,
+    0.5
+  ],
+  "diagnostic_values": {
+    "standalone_B": [
+      96.62528454272423,
+      76.26355231260295,
+      63.66708194508025,
+      52.12837963834882
+    ],
+    "standalone_C": [
+      50.52156499984761,
+      37.86092141002673,
+      34.14010992794836,
+      36.73999089638025
+    ]
+  },
+  "post_hoc_reaches": [
+    0.5
+  ]
+}
