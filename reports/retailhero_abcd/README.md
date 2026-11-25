@@ -1,5 +1,7 @@
 # X5 RetailHero SMS uplift results
 
+Explore the configuration scores, budget profiles and paired comparisons in the [ABCD results notebook](../../notebooks/retailhero_abcd_analysis.ipynb).
+
 At 30% reach, PTONet with all four components gained an estimated **8.19 incremental buyers per 1,000 SMS** over original PTONet. CausalPFN with the same components gained **0.41** over original CausalPFN. Both paired 95% intervals include zero. Across all seven prespecified comparisons, none established a gain after the Holm correction. [Registered comparisons and full report](REPORT.md)
 
 | Model at 30% reach | Original score | ABCD score | ABCD gain | Paired 95% interval for gain | Holm-adjusted p |

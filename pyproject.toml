@@ -16,6 +16,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "ruff>=0.5"]
+analysis = ["matplotlib>=3.8", "jupyterlab>=4,<5", "ipywidgets>=8,<9"]
 pipeline = [
     "scikit-uplift>=0.5.1",
     "snowflake-connector-python>=3.10",
@@ -47,3 +48,4 @@ select = ["E", "F", "I", "B", "UP"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]
