@@ -1,0 +1,3 @@
+# Preserve the byte-level hashes published with the direct Qwen experiment.
+direct-llm-*.csv -text whitespace=cr-at-eol
+direct-llm-registration.json -text whitespace=cr-at-eol

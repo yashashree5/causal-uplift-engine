@@ -57,3 +57,12 @@ python experiments/retailhero_abcd/schedule.py full --components A B C D
 ```
 
 The scheduler writes local feature banks, model files, predictions and timings under `outputs/retailhero_abcd/`. See the [experiment protocol](PROTOCOL.md) for the fold rules, feature dimensions and distinction between C and D.
+
+## Standalone direct-prompt Qwen benchmark
+
+Use the prepared X5 history archive and the local frozen Qwen3 8B NF4 checkpoint listed above. Inference requires a CUDA device and the Qwen environment. It uses one prompt per evaluation customer, writes verified batches under `outputs/retailhero_direct_llm/`, and resumes a partial run using the same registration. The evaluator needs NumPy, SciPy, Numba and scikit-uplift in the host environment. It reads the completed direct predictions, the original study’s locked predictions under `outputs/retailhero_abcd/full/`, and the evaluation outcomes in `outputs/retailhero_removal/test_labels.npz`. [Benchmark method and results](../../reports/retailhero_abcd/DIRECT_LLM.md)
+
+```console
+python experiments/retailhero_abcd/direct_llm.py --data-root PATH_TO_STUDY --model-dir PATH_TO_QWEN3_8B_NF4
+python experiments/retailhero_abcd/direct_llm_evaluate.py --data-root PATH_TO_STUDY --predictions PATH_TO_STUDY/outputs/retailhero_direct_llm/full/predictions.npz
+```

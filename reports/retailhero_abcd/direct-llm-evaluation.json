@@ -1,0 +1,106 @@
+{
+  "cohort": "full",
+  "customers": 40008,
+  "roster_sha256": "7bf7ee6cebdf98f7e1745f4ead0f4079d629e0b9283fe28b30c7509dac0b8ed6",
+  "predictions_sha256": "40fbcdf66bc5e4842033fb53442a0b42b3759d26d2c6d2fea8e73aa221e305a6",
+  "registration_sha256": "0dcf3332bdec1331d287f441efe82f656d2716e7bbedb5dfc1f1e5d6247a80cb",
+  "reference_lock_sha256": "0fd01be213479ab016e6940c5f70176b4f99f9a5e099a8e143f2be4e456b1128",
+  "reference_predictions_sha256": "33391d17b9fbbd409594866cb4e58d668dc653d4678c295484234501d12623c8",
+  "labels_sha256": "cb297824ff0df5139b85a2f4e29f57cc2a5f211a58689d3475462b0abd0f3178",
+  "unique_scores": 40008,
+  "unique_greedy_values": 1,
+  "soft_score_percentage_points": {
+    "min": -4.412948714760369,
+    "median": -0.8328104441879789,
+    "max": 1.6892260654042148
+  },
+  "greedy_bin_counts": [
+    {
+      "percentage_points": -20.0,
+      "customers": 0
+    },
+    {
+      "percentage_points": -10.0,
+      "customers": 0
+    },
+    {
+      "percentage_points": -5.0,
+      "customers": 0
+    },
+    {
+      "percentage_points": -2.0,
+      "customers": 0
+    },
+    {
+      "percentage_points": 0.0,
+      "customers": 0
+    },
+    {
+      "percentage_points": 2.0,
+      "customers": 40008
+    },
+    {
+      "percentage_points": 5.0,
+      "customers": 0
+    },
+    {
+      "percentage_points": 10.0,
+      "customers": 0
+    },
+    {
+      "percentage_points": 20.0,
+      "customers": 0
+    }
+  ],
+  "greedy_uniform_tie_sensitivity": [
+    {
+      "reach": 0.1,
+      "selected": 4001,
+      "cutoff_percentage_points": 2.0,
+      "customers_in_cutoff_bin": 40008,
+      "slots_from_cutoff_bin": 4001,
+      "value": 33.23927827740248
+    },
+    {
+      "reach": 0.2,
+      "selected": 8002,
+      "cutoff_percentage_points": 2.0,
+      "customers_in_cutoff_bin": 40008,
+      "slots_from_cutoff_bin": 8002,
+      "value": 33.23927827740248
+    },
+    {
+      "reach": 0.3,
+      "selected": 12002,
+      "cutoff_percentage_points": 2.0,
+      "customers_in_cutoff_bin": 40008,
+      "slots_from_cutoff_bin": 12002,
+      "value": 33.23927827740248
+    },
+    {
+      "reach": 0.5,
+      "selected": 20004,
+      "cutoff_percentage_points": 2.0,
+      "customers_in_cutoff_bin": 40008,
+      "slots_from_cutoff_bin": 20004,
+      "value": 33.23927827740248
+    }
+  ],
+  "reaches": [
+    0.1,
+    0.2,
+    0.3,
+    0.5
+  ],
+  "primary_reach": 0.3,
+  "bootstrap_seed": 20261123,
+  "bootstrap_replicates": 5000,
+  "score_unit": "incremental buyers per 1,000 SMS",
+  "classifier_metrics": "scikit-uplift normalized",
+  "comparison": "direct Qwen minus reference; exploratory pointwise 95% intervals",
+  "table_sha256": {
+    "scores.csv": "188bf20677037a2ce793d525760456e361be570acd6d7cd662878d3ff4ed7e75",
+    "contrasts.csv": "8e0574aee1d0ed6da6974a8acc824b241e25c4c97ba07208f22b2b14e0ce65d2",
+    "seed-policies.csv": "cd1445caf4e3acda46f41c9540ccb14e8e20c6979dbf52b800ee27c4c08d5a1b"
+  }
+}

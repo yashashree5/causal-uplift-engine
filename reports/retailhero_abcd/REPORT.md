@@ -137,6 +137,7 @@ C used the archived Qwen3 8B NF4 checkpoint, 2,048 factual prompts per LoRA adap
 
 ## Artifacts
 
+- [Follow-up comparing direct Qwen with the Original and ABCD models](DIRECT_LLM.md)
 - [Validation milestone](VALIDATION.md)
 - [Decision table by configuration and reach](decision-table.csv)
 - [Registered and exploratory paired contrasts](comparisons.csv)

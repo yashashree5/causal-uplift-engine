@@ -1,0 +1,11 @@
+{
+  "method": "frozen_qwen3_8b_direct_ordinal_cate",
+  "scope": "full",
+  "rows": 40008,
+  "roster_sha256": "7bf7ee6cebdf98f7e1745f4ead0f4079d629e0b9283fe28b30c7509dac0b8ed6",
+  "predictions_sha256": "40fbcdf66bc5e4842033fb53442a0b42b3759d26d2c6d2fea8e73aa221e305a6",
+  "registration_sha256": "0dcf3332bdec1331d287f441efe82f656d2716e7bbedb5dfc1f1e5d6247a80cb",
+  "unique_greedy_scores": 1,
+  "unique_scores": 40008,
+  "forward_and_tokenization_seconds": 3577.6346119994996
+}
