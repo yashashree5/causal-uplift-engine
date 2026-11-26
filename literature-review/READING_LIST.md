@@ -56,6 +56,20 @@ Every arXiv ID below was checked against arXiv's records. Add new papers with a 
 | E4 | Huynh, Piskorz et al., **Improving Treatment Effect Estimation with LLM-Based Data Augmentation** (GATE) — [Paper](https://openreview.net/pdf?id=2Q3gFNbpAr) | ICML 2025 workshop on Foundation Models for Structured Data | Tests whether synthetic counterfactual labels improve treatment-effect estimates on a biased Hillstrom sample |
 | E5 | Arbour et al., **AI-Assisted Variance Reduction in Randomized Experiments** — [arXiv 2606.08853](https://arxiv.org/abs/2606.08853) | KDD 2026 | Compares LLM visit forecasts with ridge regression and XGBoost for estimating the Hillstrom email effect more precisely |
 
+## F. Papers found in TEA-2 (2024 onward)
+
+Added by Tejas in the TEA-2 literature review. Each one was checked against its arXiv or proceedings page; see [review.md](tejas/review.md) section 2 for notes.
+
+| ID | Paper | Venue | Why we read it |
+|---|---|---|---|
+| F1 | CausalFM: Foundation Models for Causal Inference via Prior-Data Fitted Networks — [arXiv 2506.10914](https://arxiv.org/abs/2506.10914) | 2025 (ICLR 2026) | PFN for back-door (CATE), IV and front-door settings; second PFN competitor to CausalPFN |
+| F2 | TabDPT: Scaling Tabular Foundation Models on Real Data — [NeurIPS 2025](https://proceedings.neurips.cc/paper_files/paper/2025/file/fc0e3f908a2116ba529ad0a1530a3675-Paper-Conference.pdf) | NeurIPS 2025 | Top-K feature-space retrieval for each query, used in training and inference; precedent for M1b's retrieval |
+| F3 | Chunked TabPFN: Exact Training-Free In-Context Learning for Long-Context Tabular Data — [arXiv 2509.00326](https://arxiv.org/abs/2509.00326) | 2025 | Exact long-context attention without KNN compression; alternative to retrieval for large tables |
+| F4 | TabICL: A Tabular Foundation Model for In-Context Learning on Large Data — [arXiv 2502.05564](https://arxiv.org/abs/2502.05564) | 2025 | Handles up to 500K training rows; another large-table alternative |
+| F5 | Scalable In-Context Learning on Tabular Data via Retrieval-Augmented Large Language Models (TabRAG) — [arXiv 2502.03147](https://arxiv.org/abs/2502.03147) | 2025 | Non-parametric retrieval module for tabular data; relevant to the design of M1b's retrieval function |
+| F6 | CauGramer: Causal Graph Transformer for Treatment Effect Estimation under Unknown Interference — [ICLR 2025](https://proceedings.iclr.cc/paper_files/paper/2025/file/f7397355f68fa42e5d4739c2eb9b4cf6-Paper-Conference.pdf) | ICLR 2025 | Cross-attention over neighbours for treatment effects, but neighbours are graph peers |
+| F7 | Data-Driven Uplift Modeling — [doi:10.1109/access.2025.3557468](https://doi.org/10.1109/access.2025.3557468) | IEEE Access 2025 | Bipartite matching of treated and control units before fitting a standard model; matching baseline |
+
 ## Search queries for new papers
 
 Run these on Google Scholar, arXiv, and Semantic Scholar. Check papers from 2024 onwards first.
