@@ -1,0 +1,46 @@
+# Simulated live replay of X5 purchases into Pub/Sub. Inherits x5.yaml (gcp.project, gcp.pubsub_topic, ...).
+#
+# Precedence: CLI flag > environment (GOOGLE_CLOUD_PROJECT, X5_REPLAY_INPUT_DIR, PUBSUB_EMULATOR_HOST) > this YAML > default.
+# Credentials: Application Default Credentials only (or the emulator, which needs none). Never put keys here.
+# gcp.project is null in x5.yaml: the bucket/topic owner provides it; the producer does not provision anything.
+
+extends: x5.yaml
+
+replay:
+  # Directory with purchases.csv[.gz]. Plain CSV (data/x5/extracted) is read in parallel and is faster to prepare.
+  input_dir: data/x5/downloads
+
+  # Data seconds per wall-clock second: a number, a ratio such as 1d/1m (1 day of data per minute = 1440),
+  # or "max" (no pacing). --dry-run defaults to max unless --speed is given.
+  speed: 1d/1m
+
+  outputs_dir: streaming/producer/outputs          # event cache, rejects, run summaries, dry-run output (git-ignored)
+  checkpoint_dir: streaming/producer/checkpoints   # last acknowledged position per stream and destination (git-ignored)
+  checkpoint_every: 10000                          # acknowledged events between checkpoint writes
+  progress_every: 100000                           # events between progress lines
+  max_outstanding: 5000                            # published but not yet acknowledged messages before the loop waits
+  ack_timeout_s: 120                               # wait for one acknowledgement; a timeout counts as a failure
+
+  # Client-library batching and flow control (limits of one Pub/Sub publish request: 1000 messages, 10 MB).
+  batching:
+    max_messages: 100
+    max_bytes: 1000000
+    max_latency_s: 0.05
+    flow_control_messages: 10000      # publish() blocks when this many messages are in flight (backpressure)
+    flow_control_bytes: 50000000
+
+  event:
+    schema_version: 1
+    # Source column published as items[].amount. ASSUMPTION, not verified: the contract has no source mapping and
+    # trn_sum_from_iss is the only per-row amount-like column (see eda/FINDINGS.md). Change it here, not in code.
+    item_amount_column: trn_sum_from_iss
+    # transaction_id is shared by two clients for some ids. disambiguate appends the client id to those event ids
+    # (deterministic, both members); keep publishes the contract value unchanged (duplicate event ids); error aborts.
+    event_id_collisions: disambiguate
+    # as_source publishes points.*_spent as stored (non-positive); absolute applies abs().
+    points_spent_sign: as_source
+
+duckdb:
+  memory_limit: 6GB
+  threads: 6
+  temp_directory: null          # null = <outputs_dir>/duckdb_tmp

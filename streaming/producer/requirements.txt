@@ -1,0 +1,4 @@
+# Dependencies of the replay producer (streaming/producer/). Python 3.11:
+#   pip install -r streaming/producer/requirements.txt
+-r ../../requirements-x5.txt
+google-cloud-pubsub==2.44.0
