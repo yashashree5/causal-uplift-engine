@@ -4,7 +4,7 @@ inclusion: always
 
 # Repository and storage layout
 
-The repository already contains the nuPlan planner-regression work (`src/causal_planner/`, `tools/`, `dags/`, `infra/`, existing `.kiro/specs/`). The X5 uplift work lives **alongside** it. Do not edit the nuPlan files for X5 tasks.
+This repository is `causal-uplift-engine`. The X5 RetailHero work lives in the folders listed below. Do not edit the folders owned by other workstreams (`baseline/`, `eval/`, `models/`, `pipeline/`) for X5 tasks.
 
 ## X5 folders (Amay)
 ```
