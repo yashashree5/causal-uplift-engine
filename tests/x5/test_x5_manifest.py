@@ -178,7 +178,9 @@ def test_corrupt_gzip_and_missing_file_raise_manifest_error(tmp_path):
 
 def test_large_file_is_scanned_with_bounded_memory(tmp_path):
     path = tmp_path / "big.csv.gz"
-    line = b"0000abcdef,7e3e2e3984,2018-12-01 07:12:45,10.0,0.0,0.0,0.0,1007.0,54a4a11a29,9a80204f78,2.0,80.0,\n"
+    line = (
+        b"0000abcdef,7e3e2e3984,2018-12-01 07:12:45,10.0,0.0,0.0,0.0,1007.0,54a4a11a29,9a80204f78,2.0,80.0,\n"
+    )
     rows = 400_000  # about 38 MB uncompressed
     with gzip.open(path, "wb", compresslevel=1) as handle:
         handle.write(b"client_id,transaction_id,transaction_datetime,a,b,c,d,e,f,g,h,i,j\n")
@@ -202,7 +204,11 @@ def provenance_for(info: mf.ArtifactInfo, **overrides):
         "bytes": info.size,
         "retrieved_at": "2026-11-26T00:56:41Z",
         "retrieval": "downloaded",
-        "source": {"name": "huggingface", "url": "https://example.test/x.csv.gz", "revision_resolved": "abc123"},
+        "source": {
+            "name": "huggingface",
+            "url": "https://example.test/x.csv.gz",
+            "revision_resolved": "abc123",
+        },
     }
     record.update(overrides)
     return record
@@ -211,7 +217,11 @@ def provenance_for(info: mf.ArtifactInfo, **overrides):
 def test_manifest_contains_required_fields_and_relationships(tmp_path):
     info = mf.inspect_artifact(make_artifacts(tmp_path)["gzip"])
     manifest = mf.build_table_manifest(
-        "clients", info, ingest_date="2026-11-25", object_prefix="raw/batch", provenance_record=provenance_for(info)
+        "clients",
+        info,
+        ingest_date="2026-11-25",
+        object_prefix="raw/batch",
+        provenance_record=provenance_for(info),
     )
     assert manifest["logical_table"] == "clients"
     assert manifest["ingest_date"] == "2026-11-25"
@@ -262,7 +272,10 @@ def test_uncompressed_artifact_has_no_member(tmp_path):
 
 
 def test_object_names_follow_the_bucket_layout():
-    assert mf.raw_object_prefix("raw/batch/", "purchases", "2026-11-25") == "raw/batch/purchases/ingest_date=2026-11-25"
+    assert (
+        mf.raw_object_prefix("raw/batch/", "purchases", "2026-11-25")
+        == "raw/batch/purchases/ingest_date=2026-11-25"
+    )
     assert (
         mf.raw_object_name("raw/batch", "purchases", "2026-11-25", "purchases.csv.gz")
         == "raw/batch/purchases/ingest_date=2026-11-25/purchases.csv.gz"
@@ -288,7 +301,9 @@ def test_missing_file_and_zero_rows_are_errors(tmp_path):
     assert mf.validate_manifest("t", None, required_columns=None, expected_rows=None).errors == [
         "required file is missing"
     ]
-    check = mf.validate_manifest("t", make_manifest(tmp_path, rows=0), required_columns=None, expected_rows=None)
+    check = mf.validate_manifest(
+        "t", make_manifest(tmp_path, rows=0), required_columns=None, expected_rows=None
+    )
     assert "table has zero data rows" in check.errors
 
 
@@ -301,9 +316,17 @@ def test_missing_and_extra_columns(tmp_path):
 
 def test_expectation_is_checked_not_copied(tmp_path):
     manifest = make_manifest(tmp_path, rows=1000)
-    ok = mf.validate_manifest("t", manifest, required_columns=None, expected_rows={"rows": 1005, "tolerance_pct": 1.0})
-    assert ok.expectation["within_tolerance"] is True and ok.expectation["measured_rows"] == 1000 and not ok.warnings
-    bad = mf.validate_manifest("t", manifest, required_columns=None, expected_rows={"rows": 2000, "tolerance_pct": 1.0})
+    ok = mf.validate_manifest(
+        "t", manifest, required_columns=None, expected_rows={"rows": 1005, "tolerance_pct": 1.0}
+    )
+    assert (
+        ok.expectation["within_tolerance"] is True
+        and ok.expectation["measured_rows"] == 1000
+        and not ok.warnings
+    )
+    bad = mf.validate_manifest(
+        "t", manifest, required_columns=None, expected_rows={"rows": 2000, "tolerance_pct": 1.0}
+    )
     assert bad.expectation["within_tolerance"] is False and bad.ok  # a discrepancy is a warning
     assert any("deviates" in w for w in bad.warnings)
     assert manifest["row_count"] == 1000  # measured value untouched by the expectation

@@ -60,7 +60,9 @@ def test_document_structure_and_status(results):
     text = mf.render(as_full(results[0]), {}, "eda/outputs/full")
     assert HEADER in text
     assert "FULL data" in text and "**Not reviewed**" in text
-    assert "Prathamesh" not in text and "Yashashree" not in text and "Tejas" not in text  # no claims about teammates
+    assert (
+        "Prathamesh" not in text and "Yashashree" not in text and "Tejas" not in text
+    )  # no claims about teammates
     assert "`blocked`" in text  # no cutoff
     assert "## Open questions" in text and "## Reproduce" in text
     rows = table_rows(text)
@@ -89,12 +91,16 @@ def test_inconsistent_repeat_per_row_is_reported_differently(results):
     res.sections["semantics"]["multi_row_transactions_where_value_differs_between_rows"]["purchase_sum"] = 3
     findings = mf.build_findings(res)
     assert any("differ for some transactions" in f.observation for f in findings)
-    assert not any(f.observation.startswith("`purchase_sum` and the four points columns repeat") for f in findings)
+    assert not any(
+        f.observation.startswith("`purchase_sum` and the four points columns repeat") for f in findings
+    )
 
 
 def test_expectation_table_flags_misses(results):
     res = as_full(results[0])
-    lines = mf.expectation_rows(res, {"purchases": {"rows": 12, "tolerance_pct": 1.0}, "clients": {"rows": 1000}})
+    lines = mf.expectation_rows(
+        res, {"purchases": {"rows": 12, "tolerance_pct": 1.0}, "clients": {"rows": 1000}}
+    )
     joined = "\n".join(lines)
     assert "| `purchases` | 12 | ~12 | yes (±1%) |" in joined
     assert "| `clients` | 6 | ~1,000 | NO" in joined
@@ -158,7 +164,9 @@ def test_summary_references_point_at_matching_findings(results):
     text = mf.render(res, {}, "eda/outputs/full")
     rows = table_rows(text)
     refs = {
-        int(n) for group in re.findall(r"\(#([\d, #]+)\)", summary_section(text)) for n in re.findall(r"\d+", group)
+        int(n)
+        for group in re.findall(r"\(#([\d, #]+)\)", summary_section(text))
+        for n in re.findall(r"\d+", group)
     }
     assert refs and max(refs) <= len(rows)
     # the row cited for the transaction-key decision really is the transaction-key finding

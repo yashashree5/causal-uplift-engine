@@ -59,7 +59,9 @@ def tiny(tmp_path):
 
 
 def run_sample(tmp_path, *extra, store=None, env=None):
-    return sc.main(["--config", str(write_config(tmp_path)), *extra], env={} if env is None else env, store=store)
+    return sc.main(
+        ["--config", str(write_config(tmp_path)), *extra], env={} if env is None else env, store=store
+    )
 
 
 def load_all(tmp_path):
@@ -195,7 +197,9 @@ def test_tables_join_through_the_same_selected_ids(tiny):
 
 def test_products_are_those_referenced_by_sampled_purchases(tiny):
     tmp_path, paths = tiny
-    assert sc.main(["--config", str(write_config(tmp_path, fraction=0.01))], env={}) == sc.EXIT_OK  # 4 clients
+    assert (
+        sc.main(["--config", str(write_config(tmp_path, fraction=0.01))], env={}) == sc.EXIT_OK
+    )  # 4 clients
     data = load_all(tmp_path)
     referenced = {r["product_id"] for r in data["purchases"][1]}
     sampled_products = {r["product_id"] for r in data["products"][1]}
@@ -265,7 +269,9 @@ def test_selection_is_independent_of_input_row_order_and_duplicates(tiny):
     tmp_path, paths = tiny
     run_sample(tmp_path)
     baseline = selected_from_disk(tmp_path)
-    checksum = json.loads((tmp_path / "raw_sample" / sc.METADATA_FILE).read_text())["selected_ids_checksum"]["value"]
+    checksum = json.loads((tmp_path / "raw_sample" / sc.METADATA_FILE).read_text())["selected_ids_checksum"][
+        "value"
+    ]
 
     columns, rows = read_gz_csv(paths["clients"])
     rng = random.Random(9)
@@ -369,7 +375,9 @@ def test_validation_detects_foreign_rows_and_label_leakage(tiny, tmp_path):
 
 def test_failed_validation_publishes_nothing(tiny, monkeypatch, capsys):
     tmp_path, _ = tiny
-    monkeypatch.setattr(sc, "validate_sample", lambda *a, **k: {"ok": False, "problems": ["forced"], "checks": {}})
+    monkeypatch.setattr(
+        sc, "validate_sample", lambda *a, **k: {"ok": False, "problems": ["forced"], "checks": {}}
+    )
     assert run_sample(tmp_path) == sc.EXIT_VALIDATION
     assert not (tmp_path / "raw_sample").exists()
     assert (tmp_path / "raw_sample.failed").exists()
@@ -408,7 +416,10 @@ def test_upload_to_a_directory_store_is_idempotent_and_never_overwrites_silently
     # a different sample (new seed) now conflicts with what is in the bucket
     code = run_sample(tmp_path, "--seed", "5", "--upload", "--bucket", BUCKET, store=store)
     assert code == sc.EXIT_REMOTE
-    assert run_sample(tmp_path, "--seed", "5", "--upload", "--overwrite", "--bucket", BUCKET, store=store) == sc.EXIT_OK
+    assert (
+        run_sample(tmp_path, "--seed", "5", "--upload", "--overwrite", "--bucket", BUCKET, store=store)
+        == sc.EXIT_OK
+    )
 
 
 def test_upload_without_bucket_and_conflicting_flags(tiny, capsys):

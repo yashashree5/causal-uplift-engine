@@ -151,10 +151,14 @@ def find_source(table: str, input_dir: Path) -> Path:
         candidate = input_dir / name
         if candidate.is_file():
             return candidate
-    raise SamplingError(f"no input file for table '{table}' in {input_dir} (expected {table}.csv.gz or {table}.csv)")
+    raise SamplingError(
+        f"no input file for table '{table}' in {input_dir} (expected {table}.csv.gz or {table}.csv)"
+    )
 
 
-def register_sources(con: duckdb.DuckDBPyConnection, tables: Iterable[str], input_dir: Path) -> dict[str, Path]:
+def register_sources(
+    con: duckdb.DuckDBPyConnection, tables: Iterable[str], input_dir: Path
+) -> dict[str, Path]:
     sources = {}
     for table in tables:
         path = find_source(table, input_dir)
@@ -250,7 +254,9 @@ def _output_name(table: str, compression: str) -> str:
 def _copy(con: duckdb.DuckDBPyConnection, query: str, target: Path, compression: str) -> int:
     option = ", COMPRESSION gzip" if compression == "gzip" else ""
     con.execute(f"COPY ({query}) TO {_q(target)} (FORMAT CSV, HEADER true{option})")
-    return con.execute(f"SELECT count(*) FROM read_csv({_q(target)}, header=true, all_varchar=true)").fetchone()[0]
+    return con.execute(
+        f"SELECT count(*) FROM read_csv({_q(target)}, header=true, all_varchar=true)"
+    ).fetchone()[0]
 
 
 def write_sample(
@@ -264,7 +270,9 @@ def write_sample(
     files: dict[str, dict[str, Any]] = {}
 
     ids_path = out_dir / IDS_FILE
-    con.execute(f"COPY (SELECT client_id FROM selected ORDER BY client_id) TO {_q(ids_path)} (FORMAT CSV, HEADER true)")
+    con.execute(
+        f"COPY (SELECT client_id FROM selected ORDER BY client_id) TO {_q(ids_path)} (FORMAT CSV, HEADER true)"
+    )
 
     for table in CLIENT_TABLES:
         if table not in sources:
@@ -283,7 +291,9 @@ def write_sample(
 
     if "products" in sources:
         if "purchases" not in sources:
-            raise SamplingError("products can only be sampled together with purchases (it is defined by them)")
+            raise SamplingError(
+                "products can only be sampled together with purchases (it is defined by them)"
+            )
         target = out_dir / _output_name("products", settings.compression)
         query = (
             "SELECT * EXCLUDE (_src_row) FROM (SELECT *, row_number() OVER () AS _src_row FROM src_products) "
@@ -312,7 +322,9 @@ def validate_sample(
     checks: dict[str, Any] = {}
 
     ids_file = out_dir / IDS_FILE
-    n_ids, n_distinct = con.execute(f"SELECT count(*), count(DISTINCT client_id) FROM {_read(ids_file)}").fetchone()
+    n_ids, n_distinct = con.execute(
+        f"SELECT count(*), count(DISTINCT client_id) FROM {_read(ids_file)}"
+    ).fetchone()
     checks["selected_ids"] = {"rows": n_ids, "distinct": n_distinct, "expected": expected_k}
     if n_ids != n_distinct:
         problems.append(f"selected client IDs are not unique ({n_ids} rows, {n_distinct} distinct)")
@@ -333,13 +345,17 @@ def validate_sample(
             entry["rows_outside_selected_clients"] = outside
             if outside:
                 problems.append(f"{table}: {outside} row(s) belong to clients that were not selected")
-            entry["distinct_clients"] = con.execute(f"SELECT count(DISTINCT client_id) FROM {_read(out)}").fetchone()[0]
+            entry["distinct_clients"] = con.execute(
+                f"SELECT count(DISTINCT client_id) FROM {_read(out)}"
+            ).fetchone()[0]
         checks[table] = entry
 
     if "uplift_test" in files:
         test_columns = [
             row[0]
-            for row in con.execute(f"DESCRIBE SELECT * FROM {_read(Path(files['uplift_test']['path']))}").fetchall()
+            for row in con.execute(
+                f"DESCRIBE SELECT * FROM {_read(Path(files['uplift_test']['path']))}"
+            ).fetchall()
         ]
         leaked = [c for c in test_columns if c in {"treatment_flg", "target"}]
         checks["uplift_test"]["label_columns_present"] = leaked
@@ -396,9 +412,9 @@ def validate_sample(
             problems.append(f"products sample has {unreferenced} row(s) not referenced by sampled purchases")
         if checks["products"]["rows"] != in_products:
             # duplicate product_id rows in the source would make rows > distinct ids
-            dupes = con.execute(f"SELECT count(*) - count(DISTINCT product_id) FROM {_read(products_out)}").fetchone()[
-                0
-            ]
+            dupes = con.execute(
+                f"SELECT count(*) - count(DISTINCT product_id) FROM {_read(products_out)}"
+            ).fetchone()[0]
             if checks["products"]["rows"] - dupes != in_products:
                 problems.append("products sample row count does not match the referenced products found")
 
@@ -534,7 +550,9 @@ def run_sampling(
     try:
         sources = register_sources(con, tables, input_dir)
         started = time.monotonic()
-        n_universe, k, missing = select_client_ids(con, settings.universe_table, settings.fraction, settings.seed)
+        n_universe, k, missing = select_client_ids(
+            con, settings.universe_table, settings.fraction, settings.seed
+        )
         ids = selected_ids(con)
         progress(f"selected {k:,} of {n_universe:,} unique client IDs ({time.monotonic() - started:.1f}s)")
         if dry_run:
@@ -543,7 +561,9 @@ def run_sampling(
                 "universe": n_universe,
                 "selected": k,
                 "ids_checksum": ids_checksum(ids),
-                "would_write": [str(settings.output_dir / _output_name(t, settings.compression)) for t in tables],
+                "would_write": [
+                    str(settings.output_dir / _output_name(t, settings.compression)) for t in tables
+                ],
             }
         tmp_dir = settings.output_dir.with_name(settings.output_dir.name + f".tmp-{os.getpid()}")
         shutil.rmtree(tmp_dir, ignore_errors=True)
@@ -551,7 +571,9 @@ def run_sampling(
             progress("writing sampled tables (this scans purchases once)")
             files = write_sample(con, sources, settings, tmp_dir)
             progress("validating the written files")
-            validation = validate_sample(con, sources, files, tmp_dir, expected_k=k, check_orphans=check_orphans)
+            validation = validate_sample(
+                con, sources, files, tmp_dir, expected_k=k, check_orphans=check_orphans
+            )
             provenance = source_provenance(config, root, sources, input_dir)
             metadata = build_metadata(
                 settings,
@@ -603,7 +625,12 @@ def upload_sample(
         table = path.name.split(".")[0]
         items.append(
             land_raw.UploadItem(
-                table, "sample", path, f"{settings.object_prefix}/{path.name}", content_type, local_checksums(path)
+                table,
+                "sample",
+                path,
+                f"{settings.object_prefix}/{path.name}",
+                content_type,
+                local_checksums(path),
             )
         )
     # metadata last: its presence marks a complete sample
@@ -612,7 +639,8 @@ def upload_sample(
     conflicts = [d for d in decisions if d[2] == "conflict"]
     if conflicts:
         results = [
-            land_raw._result_for(i, "conflict", r, "remote content differs; use --overwrite") for i, r, _ in conflicts
+            land_raw._result_for(i, "conflict", r, "remote content differs; use --overwrite")
+            for i, r, _ in conflicts
         ]
         return EXIT_REMOTE, results
     try:
@@ -630,22 +658,34 @@ def build_parser() -> argparse.ArgumentParser:
         "Precedence: CLI flag > env (X5_GCS_BUCKET, GOOGLE_CLOUD_PROJECT) > YAML > default.",
     )
     parser.add_argument("--config", default=str(resolve_path("configs/x5/sample.yaml")))
-    parser.add_argument("--data-root", help="override paths.data_root (inputs are read from <data-root>/downloads)")
+    parser.add_argument(
+        "--data-root", help="override paths.data_root (inputs are read from <data-root>/downloads)"
+    )
     parser.add_argument("--input-dir", help="directory with <table>.csv.gz or <table>.csv inputs")
     parser.add_argument("--output-dir", help="override sampling.output_dir")
-    parser.add_argument("--fraction", type=float, help="override sampling.fraction (fraction of unique client IDs)")
+    parser.add_argument(
+        "--fraction", type=float, help="override sampling.fraction (fraction of unique client IDs)"
+    )
     parser.add_argument("--seed", type=int, help="override sampling.seed")
     parser.add_argument(
-        "--no-check-orphans", action="store_true", help="skip the extra full scans for IDs missing from clients"
+        "--no-check-orphans",
+        action="store_true",
+        help="skip the extra full scans for IDs missing from clients",
     )
-    parser.add_argument("--dry-run", action="store_true", help="select client IDs and print the plan; write nothing")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="select client IDs and print the plan; write nothing"
+    )
     parser.add_argument(
         "--upload", action="store_true", help="also upload raw_sample/ to gs://<bucket>/<object_prefix>/"
     )
     parser.add_argument("--bucket")
     parser.add_argument("--project")
-    parser.add_argument("--overwrite", action="store_true", help="with --upload: replace differing remote objects")
-    parser.add_argument("--local-bucket-dir", help="rehearse --upload into <dir>/<bucket>/ (not a cloud check)")
+    parser.add_argument(
+        "--overwrite", action="store_true", help="with --upload: replace differing remote objects"
+    )
+    parser.add_argument(
+        "--local-bucket-dir", help="rehearse --upload into <dir>/<bucket>/ (not a cloud check)"
+    )
     return parser
 
 
@@ -702,11 +742,15 @@ def main(argv: list[str] | None = None, *, env: Mapping[str, str] | None = None,
         return EXIT_OK
 
     print(f"sample written to {settings.output_dir}")
-    print(f"  clients selected: {result['selected_client_count']:,} of {result['universe']['unique_client_ids']:,}")
+    print(
+        f"  clients selected: {result['selected_client_count']:,} of {result['universe']['unique_client_ids']:,}"
+    )
     print(f"  selected-ID checksum: {result['selected_ids_checksum']['value']}")
     for table, info in result["outputs"].items():
         print(f"  {table:<13} rows={info['rows']:>9,}  {info['file']}")
-    for table, count in result["validation"]["checks"].get("source_client_ids_absent_from_universe", {}).items():
+    for table, count in (
+        result["validation"]["checks"].get("source_client_ids_absent_from_universe", {}).items()
+    ):
         if count:
             print(
                 f"  note: {count} distinct client_id(s) in source {table} are absent from clients and cannot be sampled"

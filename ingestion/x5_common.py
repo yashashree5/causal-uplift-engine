@@ -20,8 +20,9 @@ import json
 import os
 import re
 import tempfile
+from collections.abc import Iterable, Mapping
 from pathlib import Path
-from typing import Any, Iterable, Mapping
+from typing import Any
 
 import yaml
 
@@ -67,7 +68,9 @@ def _read_yaml(path: Path) -> dict[str, Any]:
     return data
 
 
-def load_config(path: str | os.PathLike[str] | None = None, *, _seen: tuple[Path, ...] = ()) -> dict[str, Any]:
+def load_config(
+    path: str | os.PathLike[str] | None = None, *, _seen: tuple[Path, ...] = ()
+) -> dict[str, Any]:
     """Load a YAML config, resolving an optional ``extends: <file>`` chain.
 
     ``extends`` is resolved relative to the extending file. The extending file wins
@@ -139,7 +142,9 @@ def extracted_dir(config: Mapping[str, Any], root: Path) -> Path:
 # --------------------------------------------------------------------------- hashing / IO
 
 
-def file_digests(path: str | os.PathLike[str], algorithms: Iterable[str] = ("md5", "sha256")) -> dict[str, str]:
+def file_digests(
+    path: str | os.PathLike[str], algorithms: Iterable[str] = ("md5", "sha256")
+) -> dict[str, str]:
     """Stream ``path`` once and return ``{algorithm: hexdigest}`` with bounded memory."""
     hashers = {name: hashlib.new(name) for name in algorithms}
     with open(path, "rb") as handle:

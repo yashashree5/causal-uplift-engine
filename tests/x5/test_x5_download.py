@@ -53,7 +53,10 @@ def make_config(server, *, tables=None, with_fallback=True, retries=3, extra_dow
                 "name": "fallback",
                 "kind": "http",
                 "files": {
-                    t: {"url": f"{server.base_url}/fallback/{t}.csv.gz", "md5": hashlib.md5(ARTIFACTS[t]).hexdigest()}
+                    t: {
+                        "url": f"{server.base_url}/fallback/{t}.csv.gz",
+                        "md5": hashlib.md5(ARTIFACTS[t]).hexdigest(),
+                    }
                     for t in ("uplift_train", "clients", "purchases")
                 },
             }
@@ -150,7 +153,9 @@ def test_check_remote_requires_dry_run(server, tmp_path, session):
     config_path = tmp_path / "cfg.yaml"
     config_path.write_text(yaml.safe_dump(make_config(server)))
     assert (
-        dl.main(["--config", str(config_path), "--data-root", str(tmp_path), "--check-remote"], session=session)
+        dl.main(
+            ["--config", str(config_path), "--data-root", str(tmp_path), "--check-remote"], session=session
+        )
         == dl.EXIT_USAGE
     )
 
@@ -183,7 +188,10 @@ def test_download_preserves_bytes_and_records_provenance(hub, tmp_path, session)
 
 def test_hub_id_redirect_is_recorded(server, tmp_path, session):
     server.add_hub_repo(
-        "org/retail", "rev1", {"data/uplift_train.csv.gz": ARTIFACTS["uplift_train"]}, resolved_id="new-org/retail"
+        "org/retail",
+        "rev1",
+        {"data/uplift_train.csv.gz": ARTIFACTS["uplift_train"]},
+        resolved_id="new-org/retail",
     )
     config = make_config(server, tables=["uplift_train"], with_fallback=False)
     dler = make_downloader(config, tmp_path, session)
@@ -237,7 +245,9 @@ def test_retries_exhausted_fails_with_nonzero_exit_and_no_artifact(hub, tmp_path
     config_path.write_text(yaml.safe_dump(config))
     sleeps: list[float] = []
     code = dl.main(
-        ["--config", str(config_path), "--data-root", str(tmp_path / "d")], session=session, sleep=sleeps.append
+        ["--config", str(config_path), "--data-root", str(tmp_path / "d")],
+        session=session,
+        sleep=sleeps.append,
     )
     err = capsys.readouterr().err
     assert code == dl.EXIT_DOWNLOAD_FAILED
@@ -331,7 +341,12 @@ def test_truncated_transfer_is_resumed_with_range_request(server, tmp_path, sess
     assert results[0].status == "downloaded"
     assert (tmp_path / "downloads" / "purchases.csv.gz").read_bytes() == body
     ranges = [r for m, p, r in hub.requests if p == path and m == "GET"]
-    assert ranges[0] is None and ranges[1] and ranges[1].startswith("bytes=") and not ranges[1].startswith("bytes=0-")
+    assert (
+        ranges[0] is None
+        and ranges[1]
+        and ranges[1].startswith("bytes=")
+        and not ranges[1].startswith("bytes=0-")
+    )
     assert len(sleeps) == 1
 
 
@@ -378,7 +393,9 @@ def test_no_resume_flag_removes_stale_partial(hub, tmp_path, session):
     part = tmp_path / "downloads" / "purchases.csv.gz.part"
     part.parent.mkdir(parents=True)
     part.write_bytes(b"stale")
-    config = make_config(hub, tables=["purchases"], with_fallback=False, extra_download={"resume_partial": False})
+    config = make_config(
+        hub, tables=["purchases"], with_fallback=False, extra_download={"resume_partial": False}
+    )
     make_downloader(config, tmp_path, session).run(dl.build_plan(config))
     assert (tmp_path / "downloads" / "purchases.csv.gz").read_bytes() == ARTIFACTS["purchases"]
     assert not part.exists()
@@ -559,8 +576,13 @@ def test_extract_zip_and_tar_members_and_path_sanitising(server, tmp_path, sessi
 def test_cli_rejects_unknown_table_and_bad_config(server, tmp_path, session, capsys):
     config_path = tmp_path / "cfg.yaml"
     config_path.write_text(yaml.safe_dump(make_config(server)))
-    assert dl.main(["--config", str(config_path), "--tables", "bogus", "--dry-run"], session=session) == dl.EXIT_USAGE
-    assert dl.main(["--config", str(tmp_path / "missing.yaml"), "--dry-run"], session=session) == dl.EXIT_USAGE
+    assert (
+        dl.main(["--config", str(config_path), "--tables", "bogus", "--dry-run"], session=session)
+        == dl.EXIT_USAGE
+    )
+    assert (
+        dl.main(["--config", str(tmp_path / "missing.yaml"), "--dry-run"], session=session) == dl.EXIT_USAGE
+    )
     assert "configuration error" in capsys.readouterr().err
 
 
@@ -601,9 +623,14 @@ def test_invalid_download_settings_are_rejected(server):
 
 def test_mixed_source_run_prints_warning(server, tmp_path, session, capsys):
     server.add_hub_repo("org/retail", "rev1", {"data/clients.csv.gz": ARTIFACTS["clients"]})
-    server.add("/fallback/uplift_train.csv.gz", ARTIFACTS["uplift_train"])  # hub has no uplift_train -> fallback
+    server.add(
+        "/fallback/uplift_train.csv.gz", ARTIFACTS["uplift_train"]
+    )  # hub has no uplift_train -> fallback
     config = make_config(server, tables=["uplift_train", "clients"])
     config_path = tmp_path / "cfg.yaml"
     config_path.write_text(yaml.safe_dump(config))
-    assert dl.main(["--config", str(config_path), "--data-root", str(tmp_path / "d")], session=session) == dl.EXIT_OK
+    assert (
+        dl.main(["--config", str(config_path), "--data-root", str(tmp_path / "d")], session=session)
+        == dl.EXIT_OK
+    )
     assert "more than one source" in capsys.readouterr().err

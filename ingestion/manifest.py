@@ -154,7 +154,9 @@ class _RecordCounter:
             self.bare_cr += 1
             self._pending_cr = False
         if self.bare_cr:
-            raise ManifestError(f"{self.bare_cr} bare carriage return(s) outside quotes; unsupported line endings")
+            raise ManifestError(
+                f"{self.bare_cr} bare carriage return(s) outside quotes; unsupported line endings"
+            )
         if not self._header_done:  # single-line file without a trailing newline
             self.header_bytes = bytes(self._header_buf)
         records = self.terminators + (0 if self._last_byte == b"\n" else 1) - self.blank_lines
@@ -228,16 +230,24 @@ def open_member(path: Path, compression: str) -> Iterator[tuple[BinaryIO, str | 
             yield handle, member
     elif compression == "zip":
         with zipfile.ZipFile(path) as archive:
-            names = [i.filename for i in archive.infolist() if not i.is_dir() and i.filename.lower().endswith(".csv")]
+            names = [
+                i.filename
+                for i in archive.infolist()
+                if not i.is_dir() and i.filename.lower().endswith(".csv")
+            ]
             if len(names) != 1:
-                raise ManifestError(f"{path.name}: expected exactly one .csv member in the zip, found {len(names)}")
+                raise ManifestError(
+                    f"{path.name}: expected exactly one .csv member in the zip, found {len(names)}"
+                )
             with archive.open(names[0]) as handle:
                 yield handle, names[0]
     elif compression == "tar":
         with tarfile.open(path) as archive:
             infos = [i for i in archive.getmembers() if i.isfile() and i.name.lower().endswith(".csv")]
             if len(infos) != 1:
-                raise ManifestError(f"{path.name}: expected exactly one .csv member in the tar, found {len(infos)}")
+                raise ManifestError(
+                    f"{path.name}: expected exactly one .csv member in the tar, found {len(infos)}"
+                )
             handle = archive.extractfile(infos[0])
             if handle is None:
                 raise ManifestError(f"{path.name}: cannot read member {infos[0].name}")
@@ -294,7 +304,9 @@ def raw_object_name(prefix: str, table: str, ingest_date: str, filename: str) ->
     return f"{raw_object_prefix(prefix, table, ingest_date)}/{filename}"
 
 
-def load_download_provenance(downloads_dir: Path, filename: str = "download_provenance.json") -> dict[str, Any]:
+def load_download_provenance(
+    downloads_dir: Path, filename: str = "download_provenance.json"
+) -> dict[str, Any]:
     path = downloads_dir / filename
     if path.exists():
         data = read_json(path)
@@ -318,7 +330,9 @@ def build_table_manifest(
         source = dict(provenance_record.get("source") or {})
         source["retrieved_at"] = provenance_record.get("retrieved_at")
         source["retrieval"] = provenance_record.get("retrieval")
-        matches = provenance_record.get("sha256") == info.sha256 and provenance_record.get("bytes") == info.size
+        matches = (
+            provenance_record.get("sha256") == info.sha256 and provenance_record.get("bytes") == info.size
+        )
         provenance_check = {
             "status": "matches_artifact" if matches else "MISMATCH_with_artifact",
             "recorded_sha256": provenance_record.get("sha256"),

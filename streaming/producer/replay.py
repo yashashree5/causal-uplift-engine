@@ -138,7 +138,9 @@ class ReplaySettings:
             outputs = resolve_path(section.get("outputs_dir", "streaming/producer/outputs"))
             source = src.SourceSettings(
                 input_dir=resolve_path(
-                    input_dir or env.get("X5_REPLAY_INPUT_DIR") or section.get("input_dir", "data/x5/downloads")
+                    input_dir
+                    or env.get("X5_REPLAY_INPUT_DIR")
+                    or section.get("input_dir", "data/x5/downloads")
                 ),
                 work_dir=outputs,
                 item_amount_column=str(event.get("item_amount_column", "trn_sum_from_iss")),
@@ -343,7 +345,9 @@ class Replayer:
                 if self._failure is not None:
                     break
                 if previous is not None and item.tx_ts < previous:
-                    raise OrderError(f"event {item.event_id} at {item.tx_ts} precedes the previous event at {previous}")
+                    raise OrderError(
+                        f"event {item.event_id} at {item.tx_ts} precedes the previous event at {previous}"
+                    )
                 previous = item.tx_ts
                 if first_data is None:
                     first_data, wall0 = item.tx_ts, self.clock()
@@ -359,7 +363,9 @@ class Replayer:
                 if self._failure is not None:
                     break
                 future = self.publisher.publish(
-                    item.data, item.client_id, {"event_id": item.event_id, "schema_version": str(SCHEMA_VERSION)}
+                    item.data,
+                    item.client_id,
+                    {"event_id": item.event_id, "schema_version": str(SCHEMA_VERSION)},
                 )
                 self._outstanding.append((item, future))
                 self.stats.published += 1
@@ -432,7 +438,11 @@ def make_publisher(
     publisher = PubSubPublisher(project, settings.topic, settings.batch)
     log(f"target: {'EMULATOR ' + emulator if emulator else 'Pub/Sub'} topic {publisher.topic_path}")
     if args.create_topic_in_emulator:
-        log("created topic in the emulator" if publisher.create_topic() else "topic already exists in the emulator")
+        log(
+            "created topic in the emulator"
+            if publisher.create_topic()
+            else "topic already exists in the emulator"
+        )
     publisher.check_topic()
     return publisher
 
@@ -445,10 +455,13 @@ def target_label(args: argparse.Namespace, settings: ReplaySettings, env: Mappin
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument("--config", default=str(DEFAULT_CONFIG))
     parser.add_argument(
-        "--input-dir", help="directory with purchases.csv[.gz] (env X5_REPLAY_INPUT_DIR; YAML replay.input_dir)"
+        "--input-dir",
+        help="directory with purchases.csv[.gz] (env X5_REPLAY_INPUT_DIR; YAML replay.input_dir)",
     )
     parser.add_argument(
         "--speed",
@@ -466,19 +479,27 @@ def build_parser() -> argparse.ArgumentParser:
         help="raw_sample/ directory (selected_client_ids.csv or clients.csv[.gz]) or a CSV of client_id",
     )
     parser.add_argument("--max-events", type=int, help="stop after this many events")
-    parser.add_argument("--dry-run", action="store_true", help="write the events as JSON lines instead of publishing")
-    parser.add_argument("--output", help="dry-run file ('-' = stdout); default <outputs_dir>/events_dry_run.jsonl")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="write the events as JSON lines instead of publishing"
+    )
+    parser.add_argument(
+        "--output", help="dry-run file ('-' = stdout); default <outputs_dir>/events_dry_run.jsonl"
+    )
     parser.add_argument("--project", help="GCP project id (env GOOGLE_CLOUD_PROJECT; YAML gcp.project)")
     parser.add_argument("--topic", help="Pub/Sub topic id (YAML gcp.pubsub_topic)")
     parser.add_argument("--emulator-host", help=f"host:port of the Pub/Sub emulator (sets {EMULATOR_ENV})")
-    parser.add_argument("--create-topic-in-emulator", action="store_true", help="create the topic (emulator only)")
+    parser.add_argument(
+        "--create-topic-in-emulator", action="store_true", help="create the topic (emulator only)"
+    )
     parser.add_argument(
         "--event-id-collisions", choices=EVENT_ID_COLLISION_MODES, help="shared transaction_id handling"
     )
     parser.add_argument(
         "--resume", action="store_true", help="continue after the last acknowledged event of the checkpoint"
     )
-    parser.add_argument("--reset-checkpoint", action="store_true", help="delete the checkpoint before starting")
+    parser.add_argument(
+        "--reset-checkpoint", action="store_true", help="delete the checkpoint before starting"
+    )
     parser.add_argument(
         "--checkpoint",
         action=argparse.BooleanOptionalAction,
@@ -486,7 +507,9 @@ def build_parser() -> argparse.ArgumentParser:
         help="write checkpoints (default: on when publishing, off for --dry-run)",
     )
     parser.add_argument("--prepare-only", action="store_true", help="build the ordered event table and exit")
-    parser.add_argument("--force-prepare", action="store_true", help="rebuild the event table even if it is cached")
+    parser.add_argument(
+        "--force-prepare", action="store_true", help="rebuild the event table even if it is cached"
+    )
     parser.add_argument("--run-id", help="label for the run summary file (default: UTC timestamp)")
     return parser
 
@@ -542,7 +565,9 @@ def main(
     settings.outputs_dir.mkdir(parents=True, exist_ok=True)
     rejects_path = settings.outputs_dir / f"rejects_{prepared.fingerprint[:16]}.jsonl"
     n_rejected_prepare = (
-        src.export_rejects(prepared.db_path, settings.source, rejects_path) if stats["rejected_transactions"] else 0
+        src.export_rejects(prepared.db_path, settings.source, rejects_path)
+        if stats["rejected_transactions"]
+        else 0
     )
     if n_rejected_prepare:
         log(f"{n_rejected_prepare:,} rejected transactions are listed in {rejects_path}")
@@ -552,7 +577,9 @@ def main(
 
     use_checkpoint = args.checkpoint if args.checkpoint is not None else (not args.dry_run)
     use_checkpoint = use_checkpoint or args.resume
-    checkpoint = Checkpoint.for_stream(settings.checkpoint_dir, prepared.fingerprint, target_label(args, settings, env))
+    checkpoint = Checkpoint.for_stream(
+        settings.checkpoint_dir, prepared.fingerprint, target_label(args, settings, env)
+    )
     if args.reset_checkpoint and checkpoint.reset():
         log(f"deleted checkpoint {checkpoint.path}")
     after_seq, acked_before = 0, 0
@@ -653,7 +680,9 @@ def main(
         "stream": stats,
         "run": run_stats.as_dict(),
         "rejected_transactions_total": n_rejected,
-        "events_per_second": (run_stats.published / run_stats.wall_seconds) if run_stats.wall_seconds > 0 else None,
+        "events_per_second": (run_stats.published / run_stats.wall_seconds)
+        if run_stats.wall_seconds > 0
+        else None,
         "exit_code": exit_code,
         "error": error,
         "delivery": "at-least-once; event ids are stable, consumers deduplicate by event_id",

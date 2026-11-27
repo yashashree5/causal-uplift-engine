@@ -29,7 +29,12 @@ from ingestion.x5_common import ConfigError, resolve_path
 from streaming.producer.events import EVENT_ID_COLLISION_MODES
 
 STREAM_VERSION = 1
-POINTS_COLUMNS = ("regular_points_received", "express_points_received", "regular_points_spent", "express_points_spent")
+POINTS_COLUMNS = (
+    "regular_points_received",
+    "express_points_received",
+    "regular_points_spent",
+    "express_points_spent",
+)
 REQUIRED_PURCHASE_COLUMNS = (
     "client_id",
     "transaction_id",
@@ -118,7 +123,9 @@ def connect(settings: SourceSettings, db_path: Path, *, read_only: bool = False)
         con.execute(f"SET memory_limit={_q(cfg['memory_limit'])}")
     if cfg.get("threads"):
         con.execute(f"SET threads={int(cfg['threads'])}")
-    temp = resolve_path(cfg["temp_directory"]) if cfg.get("temp_directory") else settings.work_dir / "duckdb_tmp"
+    temp = (
+        resolve_path(cfg["temp_directory"]) if cfg.get("temp_directory") else settings.work_dir / "duckdb_tmp"
+    )
     temp.mkdir(parents=True, exist_ok=True)
     con.execute(f"SET temp_directory={_q(temp)}")
     return con
@@ -163,7 +170,9 @@ def prepare_stream(settings: SourceSettings, *, force: bool = False, log=print) 
     try:
         stats = _build(con, settings, purchases, clients_file, log)
         con.execute("CREATE TABLE stream_meta (key VARCHAR PRIMARY KEY, value VARCHAR)")
-        con.execute("INSERT INTO stream_meta VALUES ('stats', ?), ('fingerprint', ?)", [json.dumps(stats), fp])
+        con.execute(
+            "INSERT INTO stream_meta VALUES ('stats', ?), ('fingerprint', ?)", [json.dumps(stats), fp]
+        )
         con.execute("CHECKPOINT")
     except BaseException:
         con.close()
@@ -327,7 +336,12 @@ EVENT_COLUMNS = (
 
 
 def iter_events(
-    db_path: Path, settings: SourceSettings, *, after_seq: int = 0, limit: int | None = None, page: int = 20000
+    db_path: Path,
+    settings: SourceSettings,
+    *,
+    after_seq: int = 0,
+    limit: int | None = None,
+    page: int = 20000,
 ) -> Iterator[dict[str, Any]]:
     """Yield event rows (dicts keyed by ``EVENT_COLUMNS``) in stream order with ``seq > after_seq``."""
     con = connect(settings, db_path, read_only=True)
@@ -383,6 +397,8 @@ def key_of(row: Mapping[str, Any]) -> list[str]:
 def event_at(db_path: Path, settings: SourceSettings, seq: int) -> Sequence[Any] | None:
     con = connect(settings, db_path, read_only=True)
     try:
-        return con.execute("SELECT tx_ts, client_id, transaction_id FROM events WHERE seq = ?", [seq]).fetchone()
+        return con.execute(
+            "SELECT tx_ts, client_id, transaction_id FROM events WHERE seq = ?", [seq]
+        ).fetchone()
     finally:
         con.close()

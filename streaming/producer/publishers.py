@@ -95,9 +95,13 @@ class BatchConfig:
             if getattr(self, name) <= 0:
                 raise PublisherSetupError(f"batching.{name} must be positive")
         if self.max_messages > 1000:
-            raise PublisherSetupError("batching.max_messages must be <= 1000 (Pub/Sub limit per publish request)")
+            raise PublisherSetupError(
+                "batching.max_messages must be <= 1000 (Pub/Sub limit per publish request)"
+            )
         if self.max_bytes > 10_000_000:
-            raise PublisherSetupError("batching.max_bytes must be <= 10,000,000 (Pub/Sub limit per publish request)")
+            raise PublisherSetupError(
+                "batching.max_bytes must be <= 10,000,000 (Pub/Sub limit per publish request)"
+            )
         if self.max_latency_s < 0:
             raise PublisherSetupError("batching.max_latency_s must be >= 0")
 
@@ -127,7 +131,9 @@ class PubSubPublisher:
             try:
                 client = pubsub_v1.PublisherClient(
                     batch_settings=BatchSettings(
-                        max_messages=batch.max_messages, max_bytes=batch.max_bytes, max_latency=batch.max_latency_s
+                        max_messages=batch.max_messages,
+                        max_bytes=batch.max_bytes,
+                        max_latency=batch.max_latency_s,
                     ),
                     publisher_options=PublisherOptions(
                         enable_message_ordering=True,
@@ -167,7 +173,9 @@ class PubSubPublisher:
     def create_topic(self) -> bool:
         """Create the topic. Only allowed against the emulator; returns True if it was created."""
         if not os.environ.get(EMULATOR_ENV):
-            raise PublisherSetupError(f"refusing to create a topic outside the emulator ({EMULATOR_ENV} is not set)")
+            raise PublisherSetupError(
+                f"refusing to create a topic outside the emulator ({EMULATOR_ENV} is not set)"
+            )
         try:
             self.client.create_topic(request={"name": self.topic_path})
             return True

@@ -169,7 +169,9 @@ def find_artifact(table: str, downloads: Path, provenance: Mapping[str, Any]) ->
     return None
 
 
-def _reusable_manifest(manifests_root: Path, table: str, ingest_date: str, artifact: Path) -> dict[str, Any] | None:
+def _reusable_manifest(
+    manifests_root: Path, table: str, ingest_date: str, artifact: Path
+) -> dict[str, Any] | None:
     path = manifests_root / table / f"ingest_date={ingest_date}" / "manifest.json"
     if not path.is_file():
         return None
@@ -280,7 +282,9 @@ class ObjectResult:
     detail: str | None = None
 
 
-def plan_uploads(outcomes: list[TableOutcome], settings: LandingSettings, ingest_date: str) -> list[UploadItem]:
+def plan_uploads(
+    outcomes: list[TableOutcome], settings: LandingSettings, ingest_date: str
+) -> list[UploadItem]:
     """Artifacts first, then manifests (a manifest's presence signals a complete table landing)."""
     items: list[UploadItem] = []
     manifest_items: list[UploadItem] = []
@@ -288,7 +292,9 @@ def plan_uploads(outcomes: list[TableOutcome], settings: LandingSettings, ingest
         if outcome.manifest is None or outcome.artifact_path is None or outcome.manifest_path is None:
             continue
         table = outcome.table
-        artifact_name = mf.raw_object_name(settings.object_prefix, table, ingest_date, outcome.artifact_path.name)
+        artifact_name = mf.raw_object_name(
+            settings.object_prefix, table, ingest_date, outcome.artifact_path.name
+        )
         items.append(
             UploadItem(
                 table,
@@ -466,7 +472,8 @@ def print_validation(outcomes: list[TableOutcome], out=None) -> None:
         if outcome.manifest:
             m = outcome.manifest
             print(
-                f"  {outcome.table:<13} rows={m['row_count']:>11,}  bytes={m['bytes']:>13,}  md5={m['md5']}", file=out
+                f"  {outcome.table:<13} rows={m['row_count']:>11,}  bytes={m['bytes']:>13,}  md5={m['md5']}",
+                file=out,
             )
         else:
             print(f"  {outcome.table:<13} NOT AVAILABLE: {outcome.error}", file=out)
@@ -515,20 +522,32 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--bucket", help="bucket name (no gs://); overrides X5_GCS_BUCKET and gcp.bucket")
     parser.add_argument("--project", help="GCP project id; overrides GOOGLE_CLOUD_PROJECT and gcp.project")
     parser.add_argument(
-        "--manifest-only", action="store_true", help="local manifests and validation only; never touch the cloud"
+        "--manifest-only",
+        action="store_true",
+        help="local manifests and validation only; never touch the cloud",
     )
     parser.add_argument(
-        "--dry-run", action="store_true", help="show the objects an upload would write; write nothing remotely"
-    )
-    parser.add_argument("--check-remote", action="store_true", help="with --dry-run: look the objects up in the bucket")
-    parser.add_argument(
-        "--overwrite", action="store_true", help="replace remote objects whose content differs (default: refuse)"
+        "--dry-run",
+        action="store_true",
+        help="show the objects an upload would write; write nothing remotely",
     )
     parser.add_argument(
-        "--strict-expectations", action="store_true", help="treat row counts outside the configured tolerance as errors"
+        "--check-remote", action="store_true", help="with --dry-run: look the objects up in the bucket"
     )
     parser.add_argument(
-        "--reuse-manifests", action="store_true", help="skip re-scanning an artifact whose local manifest is up to date"
+        "--overwrite",
+        action="store_true",
+        help="replace remote objects whose content differs (default: refuse)",
+    )
+    parser.add_argument(
+        "--strict-expectations",
+        action="store_true",
+        help="treat row counts outside the configured tolerance as errors",
+    )
+    parser.add_argument(
+        "--reuse-manifests",
+        action="store_true",
+        help="skip re-scanning an artifact whose local manifest is up to date",
     )
     parser.add_argument(
         "--local-bucket-dir",
@@ -544,7 +563,9 @@ def main(
     args = build_parser().parse_args(argv)
     env = os.environ if env is None else env
     logging.basicConfig(
-        level=logging.DEBUG if args.verbose else logging.INFO, format="%(levelname)s %(message)s", stream=sys.stderr
+        level=logging.DEBUG if args.verbose else logging.INFO,
+        format="%(levelname)s %(message)s",
+        stream=sys.stderr,
     )
 
     def progress(message: str) -> None:
@@ -603,12 +624,16 @@ def main(
     shown_bucket = bucket or _PLACEHOLDER_BUCKET
     print(f"\nPlanned objects ({len(items)}):")
     for item in items:
-        print(f"  gs://{shown_bucket}/{item.object_name}  <- {item.local_path.name} ({item.local.size:,} bytes)")
+        print(
+            f"  gs://{shown_bucket}/{item.object_name}  <- {item.local_path.name} ({item.local.size:,} bytes)"
+        )
 
     if args.dry_run and not args.check_remote:
         results = [_result_for(item, "would_upload") for item in items]
         if bucket is None:
-            print("note: no bucket configured; paths use a placeholder. Set gcp.bucket, X5_GCS_BUCKET or --bucket.")
+            print(
+                "note: no bucket configured; paths use a placeholder. Set gcp.bucket, X5_GCS_BUCKET or --bucket."
+            )
         return finish("dry_run_complete", EXIT_OK, results, None)
 
     if bucket is None:
@@ -640,7 +665,9 @@ def main(
         for r in results:
             print(f"  {r.status:<22} {r.object_name}")
         code = EXIT_REMOTE if conflicts else EXIT_OK
-        return finish("dry_run_conflicts" if conflicts else "dry_run_complete", code, results, active_store.describe())
+        return finish(
+            "dry_run_conflicts" if conflicts else "dry_run_complete", code, results, active_store.describe()
+        )
     if conflicts:
         results = [
             _result_for(item, "conflict", remote, "remote content differs; use --overwrite to replace")

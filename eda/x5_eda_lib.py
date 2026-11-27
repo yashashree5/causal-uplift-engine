@@ -39,7 +39,12 @@ ID_COLUMNS = {
     "products": ["product_id", "level_1", "level_2", "level_3", "level_4", "brand_id", "vendor_id"],
     "purchases": ["client_id", "transaction_id", "store_id", "product_id"],
 }
-POINTS = ("regular_points_received", "express_points_received", "regular_points_spent", "express_points_spent")
+POINTS = (
+    "regular_points_received",
+    "express_points_received",
+    "regular_points_spent",
+    "express_points_spent",
+)
 NO_PURCHASES = "no_purchases"
 INVALID_AGE = "invalid_or_missing"
 
@@ -106,7 +111,9 @@ class EdaSettings:
         section = config.get("eda")
         if not isinstance(section, Mapping):
             raise ConfigError("configuration has no 'eda' section (use configs/x5/eda.yaml)")
-        chosen_input = input_dir or env.get("X5_EDA_INPUT_DIR") or config_get(config, f"eda.input_dirs.{mode}")
+        chosen_input = (
+            input_dir or env.get("X5_EDA_INPUT_DIR") or config_get(config, f"eda.input_dirs.{mode}")
+        )
         if not chosen_input:
             raise ConfigError(f"no input directory for mode '{mode}' (eda.input_dirs.{mode} or --input-dir)")
         root = output_dir or Path(str(config_get(config, "eda.output_root", "eda/outputs"))) / mode
@@ -122,9 +129,15 @@ class EdaSettings:
                 money_tolerance=float(section.get("money_tolerance", 0.01)),
                 valid_age_min=int(section.get("valid_age_min", 16)),
                 valid_age_max=int(section.get("valid_age_max", 100)),
-                age_band_edges=tuple(int(x) for x in segments.get("age_band_edges", [16, 25, 35, 45, 55, 65, 101])),
-                recency_band_edges_days=tuple(int(x) for x in segments.get("recency_band_edges_days", [0, 30, 90])),
-                spend_tier_quantiles=tuple(float(x) for x in segments.get("spend_tier_quantiles", [0.25, 0.5, 0.75])),
+                age_band_edges=tuple(
+                    int(x) for x in segments.get("age_band_edges", [16, 25, 35, 45, 55, 65, 101])
+                ),
+                recency_band_edges_days=tuple(
+                    int(x) for x in segments.get("recency_band_edges_days", [0, 30, 90])
+                ),
+                spend_tier_quantiles=tuple(
+                    float(x) for x in segments.get("spend_tier_quantiles", [0.25, 0.5, 0.75])
+                ),
                 quantiles=tuple(float(x) for x in section.get("quantiles", [0.01, 0.25, 0.5, 0.75, 0.99])),
                 cutoff=cutoff or config_get(config, "campaign.cutoff"),
                 duckdb_settings=config.get("duckdb") or {},
@@ -139,10 +152,12 @@ class EdaSettings:
         ):
             if len(edges) < 2 or list(edges) != sorted(set(edges)):
                 raise ConfigError(f"eda.segments.{name} must be strictly increasing with at least 2 values")
-        if any(not 0 < q < 1 for q in settings.spend_tier_quantiles) or list(settings.spend_tier_quantiles) != sorted(
-            set(settings.spend_tier_quantiles)
-        ):
-            raise ConfigError("eda.segments.spend_tier_quantiles must be strictly increasing values in (0, 1)")
+        if any(not 0 < q < 1 for q in settings.spend_tier_quantiles) or list(
+            settings.spend_tier_quantiles
+        ) != sorted(set(settings.spend_tier_quantiles)):
+            raise ConfigError(
+                "eda.segments.spend_tier_quantiles must be strictly increasing values in (0, 1)"
+            )
         if settings.cutoff is not None:
             parse_cutoff(settings.cutoff)
         return settings
@@ -204,7 +219,10 @@ class Results:
         for name, frame in self.tables.items():
             target = tables_dir / f"{name}.csv"
             atomic_write_text(target, frame.to_csv(index=False))
-        index = {name: {"rows": int(len(f)), "columns": list(map(str, f.columns))} for name, f in self.tables.items()}
+        index = {
+            name: {"rows": int(len(f)), "columns": list(map(str, f.columns))}
+            for name, f in self.tables.items()
+        }
         payload = {"sections": _clean(self.sections), "tables": index}
         atomic_write_json(output_dir / "summary.json", payload)
 
@@ -217,7 +235,9 @@ class Results:
         results = cls()
         results.sections = payload["sections"]
         for name in payload["tables"]:
-            results.tables[name] = pd.read_csv(output_dir / "tables" / f"{name}.csv", dtype=str, keep_default_na=False)
+            results.tables[name] = pd.read_csv(
+                output_dir / "tables" / f"{name}.csv", dtype=str, keep_default_na=False
+            )
             results.tables[name] = _restore_numeric(results.tables[name])
         return results
 
@@ -226,7 +246,15 @@ def _restore_numeric(frame: pd.DataFrame) -> pd.DataFrame:
     """Convert columns that are entirely numeric back to numbers. ID-like columns stay text."""
     out = frame.copy()
     for column in out.columns:
-        if column.endswith("_id") or column in {"column", "table", "segment", "segment_kind", "stat", "label", "flag"}:
+        if column.endswith("_id") or column in {
+            "column",
+            "table",
+            "segment",
+            "segment_kind",
+            "stat",
+            "label",
+            "flag",
+        }:
             continue
         converted = pd.to_numeric(out[column], errors="coerce")
         blanks = out[column].isin(["", "nan", "NaN"])
@@ -327,7 +355,11 @@ def connect(settings: EdaSettings) -> duckdb.DuckDBPyConnection:
         con.execute(f"SET memory_limit={_q(cfg['memory_limit'])}")
     if cfg.get("threads"):
         con.execute(f"SET threads={int(cfg['threads'])}")
-    temp = resolve_path(cfg["temp_directory"]) if cfg.get("temp_directory") else settings.output_dir / "duckdb_tmp"
+    temp = (
+        resolve_path(cfg["temp_directory"])
+        if cfg.get("temp_directory")
+        else settings.output_dir / "duckdb_tmp"
+    )
     temp.mkdir(parents=True, exist_ok=True)
     con.execute(f"SET temp_directory={_q(temp)}")
     return con
@@ -440,7 +472,9 @@ def prepare(ctx: Context, files: Mapping[str, Path], fingerprint: str, *, force:
         f"{numeric}, store_id, product_id FROM src_purchases"
     )
     rows = []
-    present = {t: {r[0] for r in con.execute(f"DESCRIBE SELECT * FROM src_{t}").fetchall()} for t in REQUIRED_COLUMNS}
+    present = {
+        t: {r[0] for r in con.execute(f"DESCRIBE SELECT * FROM src_{t}").fetchall()} for t in REQUIRED_COLUMNS
+    }
     for table, column, dtype in _CAST_CHECKS:
         if column not in present[table]:  # optional columns (e.g. products.netto) may be absent
             continue
@@ -539,7 +573,8 @@ def _provenance_summary(input_dir: Path, files: Mapping[str, Path]) -> dict[str,
         "file": str(path),
         "revision_resolved": sorted(r for r in revisions if r),
         "repo_id_resolved": sorted(
-            {(a.get("source") or {}).get("repo_id_resolved") for a in artifacts.values() if a.get("source")} - {None}
+            {(a.get("source") or {}).get("repo_id_resolved") for a in artifacts.values() if a.get("source")}
+            - {None}
         ),
         "tables": tables,
     }
@@ -582,7 +617,8 @@ def section_run_info(ctx: Context, files: Mapping[str, Path], fingerprint: str) 
     if sample_meta.is_file():
         meta = json.loads(sample_meta.read_text())
         info["sample_metadata"] = {
-            k: meta.get(k) for k in ("fraction", "seed", "selected_client_count", "selected_ids_checksum", "method")
+            k: meta.get(k)
+            for k in ("fraction", "seed", "selected_client_count", "selected_ids_checksum", "method")
         }
 
 
@@ -626,7 +662,12 @@ def section_files(ctx: Context) -> None:
         ("products", "products_t", "product_id"),
     ):
         n, distinct = con.execute(f"SELECT count({key}), count(DISTINCT {key}) FROM {view}").fetchone()
-        keys[table] = {"key": key, "rows_with_key": n, "distinct_keys": distinct, "duplicate_rows": n - distinct}
+        keys[table] = {
+            "key": key,
+            "rows_with_key": n,
+            "distinct_keys": distinct,
+            "duplicate_rows": n - distinct,
+        }
     out["key_uniqueness"] = keys
 
     # ---- purchases: duplicates (hash based: a 64-bit hash collision would only under-count)
@@ -686,7 +727,9 @@ def section_files(ctx: Context) -> None:
         "SELECT count(*) FROM purchases_t WHERE product_id IS NOT NULL "
         "AND product_id NOT IN (SELECT product_id FROM products_t)"
     )
-    rel["purchase_rows_with_null_product_id"] = one("SELECT count(*) FROM purchases_t WHERE product_id IS NULL")
+    rel["purchase_rows_with_null_product_id"] = one(
+        "SELECT count(*) FROM purchases_t WHERE product_id IS NULL"
+    )
     rel["products_never_purchased"] = one(
         "SELECT count(*) FROM products_t WHERE product_id NOT IN (SELECT DISTINCT product_id FROM purchases_t WHERE product_id IS NOT NULL)"
     )
@@ -914,13 +957,21 @@ def section_distributions(ctx: Context) -> None:
     ctx.results.add_table(
         "hist_spend_per_transaction", _hist(ctx, "tx", "purchase_sum_max", width=100, lo=-1000, hi=20000)
     )
-    ctx.results.add_table("hist_transactions_per_client", _hist(ctx, "cx", "n_tx", width=1, where="n_tx > 0", hi=200))
+    ctx.results.add_table(
+        "hist_transactions_per_client", _hist(ctx, "cx", "n_tx", width=1, where="n_tx > 0", hi=200)
+    )
     ctx.results.add_table(
         "hist_age",
-        _hist(ctx, "clients_t", "age", width=1, lo=ctx.settings.valid_age_min, hi=ctx.settings.valid_age_max + 1),
+        _hist(
+            ctx, "clients_t", "age", width=1, lo=ctx.settings.valid_age_min, hi=ctx.settings.valid_age_max + 1
+        ),
     )
-    ctx.results.add_table("hist_recency_days", _hist(ctx, "cx_feat", "recency_days", width=5, where="n_tx > 0"))
-    ctx.results.add_table("hist_stores_per_client", _hist(ctx, "cx", "n_stores", width=1, where="n_stores > 0", hi=40))
+    ctx.results.add_table(
+        "hist_recency_days", _hist(ctx, "cx_feat", "recency_days", width=5, where="n_tx > 0")
+    )
+    ctx.results.add_table(
+        "hist_stores_per_client", _hist(ctx, "cx", "n_stores", width=1, where="n_stores > 0", hi=40)
+    )
     ctx.results.add_table(
         "hist_total_spend_per_client",
         _hist(ctx, "cx", "total_spend", width=1000, where="n_tx > 0", lo=-1000, hi=100000),
@@ -934,11 +985,14 @@ def _train_features_view(ctx: Context) -> list[str]:
     rec_labels = band_labels(s.recency_band_edges_days, open_ended=True)
     age_case = _case_expr("age", s.age_band_edges, age_labels, open_ended=False)
     # ages outside the valid range are not allowed to land in a band even if the edges would cover them
-    age_case = age_case.replace("CASE ", f"CASE WHEN age < {s.valid_age_min} OR age > {s.valid_age_max} THEN NULL ", 1)
+    age_case = age_case.replace(
+        "CASE ", f"CASE WHEN age < {s.valid_age_min} OR age > {s.valid_age_max} THEN NULL ", 1
+    )
     rec_case = _case_expr("recency_days", s.recency_band_edges_days, rec_labels, open_ended=True)
     q = list(s.spend_tier_quantiles)
     edges = ctx.con.execute(
-        "SELECT quantile_cont(f.total_spend, ?) FROM cx f JOIN uplift_train_t t USING (client_id) WHERE f.n_tx > 0", [q]
+        "SELECT quantile_cont(f.total_spend, ?) FROM cx f JOIN uplift_train_t t USING (client_id) WHERE f.n_tx > 0",
+        [q],
     ).fetchone()[0]
     edges = [float(e) for e in edges]
     tier_labels = [f"spend_Q{i + 1}" for i in range(len(edges) + 1)]
@@ -1051,7 +1105,8 @@ def section_segments(ctx: Context) -> None:
             f"FROM train_feat WHERE treatment_flg IN (0, 1) AND target IN (0, 1) GROUP BY 1"
         )
         data = data.sort_values(
-            "segment", key=lambda col: col.map({v: i for i, v in enumerate(order or sorted(col))}) if order else col
+            "segment",
+            key=lambda col: col.map({v: i for i, v in enumerate(order or sorted(col))}) if order else col,
         )
         for r in data.itertuples():
             stats = uplift_stats(
@@ -1063,7 +1118,9 @@ def section_segments(ctx: Context) -> None:
                 min_arm_size=s.min_arm_size,
                 min_cell_events=s.min_cell_events,
             )
-            frames.append({"segment_kind": "gender" if kind == "gender_label" else kind, "segment": r.segment, **stats})
+            frames.append(
+                {"segment_kind": "gender" if kind == "gender_label" else kind, "segment": r.segment, **stats}
+            )
     table = pd.DataFrame(frames)
     total_n = table[table["segment_kind"] == "age_band"]["n"].sum()
     table["share_of_train"] = table["n"] / total_n if total_n else math.nan
@@ -1093,7 +1150,9 @@ def section_ids(ctx: Context) -> None:
     rows = []
     for table, columns in ID_COLUMNS.items():
         for column in columns:
-            if column not in {r[0] for r in ctx.con.execute(f"DESCRIBE SELECT * FROM {views[table]}").fetchall()}:
+            if column not in {
+                r[0] for r in ctx.con.execute(f"DESCRIBE SELECT * FROM {views[table]}").fetchall()
+            }:
                 continue
             row = ctx.con.execute(
                 "SELECT count(*), min(length(v)), max(length(v)), "
@@ -1172,12 +1231,16 @@ def section_semantics(ctx: Context) -> None:
         return f"count(*) FILTER (WHERE {column}_min <> {column}_max OR ({column}_n > 0 AND {column}_n < n_rows))"
 
     constants = ["store_id", "ts", "purchase_sum", *POINTS]
-    row = ctx.con.execute(f"SELECT {', '.join(inconsistent(c) for c in constants)} FROM tx WHERE n_rows > 1").fetchone()
+    row = ctx.con.execute(
+        f"SELECT {', '.join(inconsistent(c) for c in constants)} FROM tx WHERE n_rows > 1"
+    ).fetchone()
     out["multi_row_transactions_where_value_differs_between_rows"] = dict(zip(constants, row, strict=True))
     out["multi_row_transactions_total"] = out["transactions_with_several_rows"]
 
     # naive row-sum vs once-per-transaction sum of purchase_sum
-    naive, dedup = ctx.one("SELECT (SELECT sum(purchase_sum) FROM purchases_t), (SELECT sum(purchase_sum_max) FROM tx)")
+    naive, dedup = ctx.one(
+        "SELECT (SELECT sum(purchase_sum) FROM purchases_t), (SELECT sum(purchase_sum_max) FROM tx)"
+    )
     out["sum_purchase_sum_over_rows"] = naive
     out["sum_purchase_sum_once_per_transaction"] = dedup
     out["row_sum_overstatement_factor"] = naive / dedup if dedup else math.nan
@@ -1193,11 +1256,15 @@ def section_semantics(ctx: Context) -> None:
     out["client_transactions_with_more_than_one_store"] = ctx.one(
         "SELECT count(*) FROM tx WHERE store_id_min <> store_id_max"
     )[0]
-    out["client_transactions_with_more_than_one_timestamp"] = ctx.one("SELECT count(*) FROM tx WHERE ts_min <> ts_max")[
-        0
-    ]
-    out["client_transactions_with_null_client"] = ctx.one("SELECT count(*) FROM tx WHERE client_id_n < n_rows")[0]
-    out["rows_with_null_transaction_id"] = ctx.one("SELECT count(*) FROM purchases_t WHERE transaction_id IS NULL")[0]
+    out["client_transactions_with_more_than_one_timestamp"] = ctx.one(
+        "SELECT count(*) FROM tx WHERE ts_min <> ts_max"
+    )[0]
+    out["client_transactions_with_null_client"] = ctx.one(
+        "SELECT count(*) FROM tx WHERE client_id_n < n_rows"
+    )[0]
+    out["rows_with_null_transaction_id"] = ctx.one(
+        "SELECT count(*) FROM purchases_t WHERE transaction_id IS NULL"
+    )[0]
     out["distinct_client_ts_store_triples"] = ctx.one(
         "SELECT count(*) FROM (SELECT DISTINCT client_id_min, ts_min, store_id_min FROM tx)"
     )[0]
@@ -1250,9 +1317,9 @@ def section_semantics(ctx: Context) -> None:
             strict=True,
         )
     )
-    out["transactions_with_nonpositive_purchase_sum"] = ctx.one("SELECT count(*) FROM tx WHERE purchase_sum_max <= 0")[
-        0
-    ]
+    out["transactions_with_nonpositive_purchase_sum"] = ctx.one(
+        "SELECT count(*) FROM tx WHERE purchase_sum_max <= 0"
+    )[0]
     out["rows_with_trn_sum_from_iss"], out["rows_with_trn_sum_from_red"], out["rows_total"] = ctx.one(
         "SELECT count(trn_sum_from_iss), count(trn_sum_from_red), count(*) FROM purchases_t"
     )
@@ -1308,7 +1375,9 @@ def run_eda(settings: EdaSettings, *, force: bool = False, figures: bool = True,
         started = time.monotonic()
         log(f"[{settings.mode}] preparing typed tables from {settings.input_dir}")
         rebuilt = _timed_prepare(ctx, files, fingerprint, force)
-        log(f"[{settings.mode}] typed tables {'built' if rebuilt else 'reused (inputs and settings unchanged)'}")
+        log(
+            f"[{settings.mode}] typed tables {'built' if rebuilt else 'reused (inputs and settings unchanged)'}"
+        )
         section_run_info(ctx, files, fingerprint)
         for name, func in SECTIONS:
             log(f"[{settings.mode}] section: {name}")

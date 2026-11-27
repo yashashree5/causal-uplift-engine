@@ -186,7 +186,9 @@ class GcsObjectStore:
             raise self._translate(exc) from exc
         except Exception as exc:  # google-resumable-media DataCorruption and friends
             if type(exc).__name__ == "DataCorruption":
-                raise TransferIntegrityError(f"upload of {name} failed client-side CRC32C verification: {exc}") from exc
+                raise TransferIntegrityError(
+                    f"upload of {name} failed client-side CRC32C verification: {exc}"
+                ) from exc
             raise
         return self._remote(blob)
 
@@ -217,7 +219,9 @@ class DirectoryObjectStore:
         if not path.is_file():
             return None
         checks = local_checksums(path)
-        return RemoteObject(name, checks.size, checks.md5_base64, checks.crc32c_base64, path.stat().st_mtime_ns)
+        return RemoteObject(
+            name, checks.size, checks.md5_base64, checks.crc32c_base64, path.stat().st_mtime_ns
+        )
 
     def upload_file(
         self, local_path: Path, name: str, *, content_type: str, if_generation_match: int, chunk_size: int
@@ -226,7 +230,9 @@ class DirectoryObjectStore:
         existing = self.stat(name)
         current_generation = 0 if existing is None else existing.generation
         if current_generation != if_generation_match:
-            raise PreconditionFailed(f"{name}: generation {current_generation} != required {if_generation_match}")
+            raise PreconditionFailed(
+                f"{name}: generation {current_generation} != required {if_generation_match}"
+            )
         target.parent.mkdir(parents=True, exist_ok=True)
         fd, tmp = tempfile.mkstemp(dir=target.parent, prefix=".upload.")
         os.close(fd)

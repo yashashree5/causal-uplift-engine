@@ -86,7 +86,9 @@ def build_tiny_x5(
     clients_rows = []
     for i, cid in enumerate(client_ids):
         issue = datetime(2017, 1, 1) + timedelta(days=rng.randint(0, 600), seconds=rng.randint(0, 86399))
-        redeem = "" if i % 4 == 0 else (issue + timedelta(days=rng.randint(1, 100))).strftime("%Y-%m-%d %H:%M:%S")
+        redeem = (
+            "" if i % 4 == 0 else (issue + timedelta(days=rng.randint(1, 100))).strftime("%Y-%m-%d %H:%M:%S")
+        )
         age = rng.choice([18, 25, 33, 41, 52, 67, 79, 120, -5])
         clients_rows.append([cid, issue.strftime("%Y-%m-%d %H:%M:%S"), redeem, age, rng.choice("FMU")])
 
@@ -168,12 +170,17 @@ def build_tiny_x5(
     return paths
 
 
-def write_landing_config(tmp_path: Path, *, bucket: str | None = None, expectations: dict | None = None) -> Path:
+def write_landing_config(
+    tmp_path: Path, *, bucket: str | None = None, expectations: dict | None = None
+) -> Path:
     """Write a raw-landing YAML pointing at ``tmp_path/data`` and return its path."""
     import yaml
 
     config = {
-        "dataset": {"name": "x5_test", "tables": ["uplift_train", "uplift_test", "clients", "products", "purchases"]},
+        "dataset": {
+            "name": "x5_test",
+            "tables": ["uplift_train", "uplift_test", "clients", "products", "purchases"],
+        },
         "paths": {
             "data_root": str(tmp_path / "data"),
             "downloads_subdir": "downloads",

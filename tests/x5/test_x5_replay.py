@@ -185,7 +185,12 @@ def test_event_matches_contract_and_derived_values(env_dir):
             {"product_id": "p1", "quantity": 2.0, "amount": 20.0},
             {"product_id": "p2", "quantity": 1.0, "amount": 10.0},
         ],  # sorted by product id, not file order
-        "points": {"regular_received": 1.5, "express_received": 0.0, "regular_spent": 0.0, "express_spent": 0.0},
+        "points": {
+            "regular_received": 1.5,
+            "express_received": 0.0,
+            "regular_spent": 0.0,
+            "express_spent": 0.0,
+        },
         "schema_version": 1,
     }
     assert list(first) == [
@@ -208,7 +213,9 @@ def test_leading_zero_ids_are_strings_and_negative_points_pass_through(env_dir):
 
 def test_points_spent_absolute_mode(env_dir):
     rec = Recorder()
-    cfg = write_config(env_dir, event={"points_spent_sign": "absolute", "event_id_collisions": "disambiguate"})
+    cfg = write_config(
+        env_dir, event={"points_spent_sign": "absolute", "event_id_collisions": "disambiguate"}
+    )
     assert replay.main(["--config", str(cfg)], {}, publisher=rec) == replay.EXIT_REJECTS
     by_id = {m[0]["event_id"]: m[0] for m in rec.messages}
     assert by_id["t2"]["points"]["regular_spent"] == 5.0
@@ -222,7 +229,9 @@ def test_transactions_are_grouped_even_when_rows_are_far_apart(env_dir):
 
 
 def test_order_is_timestamp_then_client_then_transaction_and_contiguous_seq(env_dir):
-    settings = replay.ReplaySettings.from_config(yaml.safe_load(write_config(env_dir).read_text()), env={}).source
+    settings = replay.ReplaySettings.from_config(
+        yaml.safe_load(write_config(env_dir).read_text()), env={}
+    ).source
     prepared = src.prepare_stream(settings, log=lambda m: None)
     rows = list(src.iter_events(prepared.db_path, settings))
     assert [r["seq"] for r in rows] == list(range(1, len(rows) + 1))
@@ -248,7 +257,9 @@ def test_rejected_transactions_are_reported_not_published(env_dir, capsys):
     code = run_main(env_dir, publisher=rec)
     assert code == replay.EXIT_REJECTS
     assert len(rec.messages) == len(GOOD_ORDER)
-    rejects = [json.loads(line) for line in next((env_dir / "out").glob("rejects_*.jsonl")).read_text().splitlines()]
+    rejects = [
+        json.loads(line) for line in next((env_dir / "out").glob("rejects_*.jsonl")).read_text().splitlines()
+    ]
     reasons = {r["transaction_id"]: r["reason"] for r in rejects}
     assert reasons == {
         "bad1": "missing_or_invalid_timestamp",
@@ -313,7 +324,10 @@ def test_start_and_end_filters(env_dir):
 
 
 def test_filter_does_not_change_event_ids_of_shared_transactions(env_dir):
-    ids = [e["event_id"] for e in events_from_main(env_dir, "--clients-sample", str(_clients_csv(env_dir, ["0004"])))]
+    ids = [
+        e["event_id"]
+        for e in events_from_main(env_dir, "--clients-sample", str(_clients_csv(env_dir, ["0004"])))
+    ]
     assert ids == ["dup-0004"]  # disambiguated although its twin (0005) is filtered out
 
 
@@ -330,7 +344,8 @@ def test_clients_sample_directory_and_file(env_dir):
     ids = [e["event_id"] for e in events_from_main(env_dir, "--clients-sample", str(sample))]
     assert ids == ["t2", "t4"]
     ids = [
-        e["event_id"] for e in events_from_main(env_dir, "--clients-sample", str(sample / "selected_client_ids.csv"))
+        e["event_id"]
+        for e in events_from_main(env_dir, "--clients-sample", str(sample / "selected_client_ids.csv"))
     ]
     assert ids == ["t2", "t4"]
 
@@ -433,7 +448,9 @@ def make_items(spec):
     items = []
     for i, (client, ts) in enumerate(spec, 1):
         stamp = datetime.fromisoformat(ts)
-        items.append(replay.ReplayItem(i, stamp, client, f"e{i}", b"{}", [stamp.isoformat(), client, f"e{i}"]))
+        items.append(
+            replay.ReplayItem(i, stamp, client, f"e{i}", b"{}", [stamp.isoformat(), client, f"e{i}"])
+        )
     return items
 
 
@@ -446,7 +463,9 @@ def make_replayer(publisher, clock, **kw):
 def test_pacing_follows_data_time_scaled_by_speed():
     clock = FakeClock()
     pub = TimedPublisher(clock)
-    items = make_items([("a", "2019-01-01 00:00:00"), ("b", "2019-01-01 12:00:00"), ("a", "2019-01-03 00:00:00")])
+    items = make_items(
+        [("a", "2019-01-01 00:00:00"), ("b", "2019-01-01 12:00:00"), ("a", "2019-01-03 00:00:00")]
+    )
     stats = make_replayer(pub, clock, speed=86400.0).run(items)  # one data day per wall second
     assert [round(t - 1000.0, 6) for t, _, _ in pub.log] == [0.0, 0.5, 2.0]
     assert stats.published == stats.acked == 3 and stats.max_lag_s == 0.0 and stats.late_events == 0
@@ -470,7 +489,9 @@ def test_late_events_are_measured_not_hidden():
             return super().publish(*a)
 
     pub = SlowPublisher(clock)
-    items = make_items([("a", "2019-01-01 00:00:00"), ("a", "2019-01-01 00:00:01"), ("a", "2019-01-01 00:00:02")])
+    items = make_items(
+        [("a", "2019-01-01 00:00:00"), ("a", "2019-01-01 00:00:01"), ("a", "2019-01-01 00:00:02")]
+    )
     stats = make_replayer(pub, clock, speed=1.0).run(items)
     assert stats.max_lag_s > 1.0 and stats.late_events >= 1
 
@@ -506,7 +527,11 @@ def test_failure_stops_publishing_and_checkpoints_the_contiguous_acked_prefix():
     saved: list[tuple[int, list[str], int]] = []
     items = make_items([("a", f"2019-01-01 00:00:{i:02d}") for i in range(10)])
     replayer = make_replayer(
-        pub, clock, speed=math.inf, on_checkpoint=lambda s, k, n: saved.append((s, k, n)), checkpoint_every=100
+        pub,
+        clock,
+        speed=math.inf,
+        on_checkpoint=lambda s, k, n: saved.append((s, k, n)),
+        checkpoint_every=100,
     )
     with pytest.raises(replay.PublishFailed, match="seq 4"):
         replayer.run(items)
@@ -566,7 +591,11 @@ def test_progress_callback():
     clock = FakeClock()
     seen: list[int] = []
     make_replayer(
-        TimedPublisher(clock), clock, speed=math.inf, progress=lambda s: seen.append(s.published), progress_every=2
+        TimedPublisher(clock),
+        clock,
+        speed=math.inf,
+        progress=lambda s: seen.append(s.published),
+        progress_every=2,
     ).run(make_items([("a", f"2019-01-01 00:00:{i:02d}") for i in range(5)]))
     assert seen == [2, 4]
 
@@ -677,7 +706,14 @@ def test_dry_run_resume_appends(env_dir):
 def test_dry_run_with_speed_is_paced(env_dir):
     clock = FakeClock()
     code = run_main(
-        env_dir, "--dry-run", "--speed", "1d/10s", "--output", str(env_dir / "p.jsonl"), clock=clock, sleep=clock.sleep
+        env_dir,
+        "--dry-run",
+        "--speed",
+        "1d/10s",
+        "--output",
+        str(env_dir / "p.jsonl"),
+        clock=clock,
+        sleep=clock.sleep,
     )
     assert code == replay.EXIT_REJECTS
     # first event 2019-01-01 10:00, last 2019-01-05 23:59:59 = 4d 13:59:59 of data at 8640 data s per wall s
@@ -695,7 +731,12 @@ def test_prepare_only_builds_cache_without_publishing(env_dir, capsys):
 
 @pytest.mark.parametrize(
     "args",
-    [["--speed", "fast"], ["--start", "yesterday"], ["--max-events", "0"], ["--event-id-collisions", "bogus"]],
+    [
+        ["--speed", "fast"],
+        ["--start", "yesterday"],
+        ["--max-events", "0"],
+        ["--event-id-collisions", "bogus"],
+    ],
 )
 def test_bad_arguments_exit_2(env_dir, args, capsys):
     try:
@@ -721,7 +762,9 @@ def test_settings_precedence_cli_over_env_over_yaml(tmp_path):
         config, project="cli-proj", topic="cli-topic", speed="max", env={"GOOGLE_CLOUD_PROJECT": "env-proj"}
     )
     assert (s.project, s.topic, s.speed) == ("cli-proj", "cli-topic", math.inf)
-    assert replay.ReplaySettings.from_config(config, dry_run=True, env={}).speed == math.inf  # dry runs are unpaced
+    assert (
+        replay.ReplaySettings.from_config(config, dry_run=True, env={}).speed == math.inf
+    )  # dry runs are unpaced
     assert replay.ReplaySettings.from_config(config, dry_run=True, speed="30", env={}).speed == 30.0
     assert replay.ReplaySettings.from_config({"replay": {}}, dry_run=True, env={}).speed == math.inf
 
@@ -770,7 +813,9 @@ def test_pubsub_publisher_passes_ordering_key_and_attributes():
     client = FakePubSubClient()
     pub = PubSubPublisher("p", "t", BatchConfig(), client=client)
     pub.publish(b"{}", "client-1", {"event_id": "e1", "schema_version": "1"})
-    assert client.calls == [("projects/p/topics/t", b"{}", "client-1", {"event_id": "e1", "schema_version": "1"})]
+    assert client.calls == [
+        ("projects/p/topics/t", b"{}", "client-1", {"event_id": "e1", "schema_version": "1"})
+    ]
     pub.close()
     assert client.stopped
 
@@ -899,7 +944,9 @@ def test_build_items_reports_rows_that_cannot_be_assembled(env_dir):
 # --------------------------------------------------------------------------- emulator (optional)
 
 
-@pytest.mark.skipif(not os.environ.get("PUBSUB_EMULATOR_HOST"), reason="PUBSUB_EMULATOR_HOST not set (no emulator)")
+@pytest.mark.skipif(
+    not os.environ.get("PUBSUB_EMULATOR_HOST"), reason="PUBSUB_EMULATOR_HOST not set (no emulator)"
+)
 def test_emulator_roundtrip_preserves_per_client_order(env_dir):
     from google.cloud import pubsub_v1
 
@@ -909,7 +956,9 @@ def test_emulator_roundtrip_preserves_per_client_order(env_dir):
     topic_path = publisher_client.topic_path(project, topic)
     publisher_client.create_topic(request={"name": topic_path})
     sub_path = subscriber.subscription_path(project, sub)
-    subscriber.create_subscription(request={"name": sub_path, "topic": topic_path, "enable_message_ordering": True})
+    subscriber.create_subscription(
+        request={"name": sub_path, "topic": topic_path, "enable_message_ordering": True}
+    )
     code = replay.main(
         ["--config", str(write_config(env_dir)), "--project", project, "--topic", topic, "--run-id", "emu"],
         dict(os.environ),
