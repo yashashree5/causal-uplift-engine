@@ -1,0 +1,47 @@
+# Raw landing: manifests and upload of the unchanged downloaded artifacts to Cloud Storage.
+# Inherits dataset/paths/download/gcp settings from x5.yaml.
+#
+# Precedence: CLI flag > environment variable (X5_GCS_BUCKET, GOOGLE_CLOUD_PROJECT) > YAML > default.
+# Credentials: Application Default Credentials only (`gcloud auth application-default login`
+# or GOOGLE_APPLICATION_CREDENTIALS pointing at a key file kept outside the repository).
+
+extends: x5.yaml
+
+raw_landing:
+  # Object layout: gs://<bucket>/<object_prefix>/<logical_table>/ingest_date=YYYY-MM-DD/<file>
+  object_prefix: raw/batch
+  manifests_subdir: manifests        # local manifests under <data_root>/<manifests_subdir>/
+  upload_chunk_bytes: 8388608        # resumable-upload chunk (must be a multiple of 262144)
+  ingest_date: null                  # null = today in UTC; override with --ingest-date YYYY-MM-DD
+
+  # Columns each table must contain. They were read from the headers of the Hugging Face
+  # revision pinned in x5.yaml on 2026-11-25; a missing column is a validation error.
+  required_columns:
+    uplift_train: [client_id, treatment_flg, target]
+    uplift_test: [client_id]
+    clients: [client_id, first_issue_date, first_redeem_date, age, gender]
+    products: [product_id, level_1, level_2, level_3, level_4, segment_id, brand_id, vendor_id, netto, is_own_trademark, is_alcohol]
+    purchases:
+      - client_id
+      - transaction_id
+      - transaction_datetime
+      - regular_points_received
+      - express_points_received
+      - regular_points_spent
+      - express_points_spent
+      - purchase_sum
+      - store_id
+      - product_id
+      - product_quantity
+      - trn_sum_from_iss
+      - trn_sum_from_red
+
+  # Approximate row counts quoted in the work plan ("Semester 1 Work Plan", Already done table).
+  # They are expectations to CHECK the measured counts against, never numbers copied into a
+  # manifest. A miss is reported as a discrepancy (exit code 1 with --strict-expectations).
+  expectations:
+    purchases: {rows: 45800000, tolerance_pct: 1.0, source: "work plan: 45.8M"}
+    clients: {rows: 400000, tolerance_pct: 1.0, source: "work plan: 400k"}
+    uplift_train: {rows: 200000, tolerance_pct: 1.0, source: "work plan: 200k"}
+    uplift_test: {rows: 200000, tolerance_pct: 1.0, source: "work plan: 200k"}
+    products: {rows: 43000, tolerance_pct: 1.0, source: "work plan: about 43k"}
