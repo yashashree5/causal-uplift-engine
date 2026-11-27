@@ -1,0 +1,85 @@
+# X5 RetailHero uplift: shared settings for download, raw landing, sampling, EDA and replay.
+#
+# Task-specific files (raw_landing.yaml, sample.yaml, eda.yaml, replay.yaml) declare
+# `extends: x5.yaml`, so values set here are inherited and can be overridden there.
+#
+# Precedence: CLI flag > environment variable (only where documented) > this YAML > defaults.
+# Relative paths are resolved against the repository root.
+
+dataset:
+  name: x5_retailhero_uplift
+  # Logical tables the work plan requires, in dependency order.
+  tables: [uplift_train, uplift_test, clients, products, purchases]
+
+paths:
+  # Local data root (git-ignored). Override with --data-root.
+  data_root: data/x5
+  downloads_subdir: downloads   # downloaded artifacts, byte-for-byte as served
+  extracted_subdir: extracted   # CSV members extracted from artifacts (optional, derived)
+  provenance_file: download_provenance.json   # written inside <data_root>/<downloads_subdir>
+
+download:
+  connect_timeout_s: 15
+  read_timeout_s: 60
+  max_retries: 5            # retries per source after the first attempt
+  backoff_initial_s: 2.0
+  backoff_factor: 2.0
+  backoff_max_s: 60.0
+  chunk_bytes: 1048576
+  resume_partial: true      # continue a leftover <artifact>.part with an HTTP Range request
+  extract: false            # also write the decompressed CSV under extracted_subdir
+
+# Sources are tried in order, per logical table. A table is never replaced by toy or
+# synthetic data: if no source can deliver it, the run fails with a nonzero exit code.
+sources:
+  # Verified 2026-11-25: the id `dllllb/retailhero-uplift` redirects to
+  # `pytorch-lifestream/retailhero-uplift` (HTTP 307). Both ids resolve to the same revision.
+  - name: huggingface
+    kind: huggingface
+    endpoint: https://huggingface.co
+    repo_id: dllllb/retailhero-uplift
+    # Pinned dataset commit (the `sha` returned by the Hub API on 2026-11-25).
+    # Set to `main` to follow the head of the dataset repository.
+    revision: 7744156a4f89f4828607921e8c9668f04801f4de
+    auth_token_env: HF_TOKEN   # optional; only used if the variable is set
+    files:
+      uplift_train: data/uplift_train.csv.gz
+      uplift_test: data/uplift_test.csv.gz
+      clients: data/clients.csv.gz
+      products: data/products.csv.gz
+      purchases: data/purchases.csv.gz
+
+  # Fallback: the scikit-uplift S3 bucket used by sklift.datasets.fetch_x5. Its loader
+  # (sklift/datasets/datasets.py) only references uplift_train, clients and purchases, together
+  # with the MD5 values below; it has no products or uplift_test file. On 2026-11-25 the
+  # bucket answered HTTP 403 AccessDenied to anonymous requests, so this source is
+  # currently expected to fail. It is kept as the documented fallback.
+  - name: scikit-uplift-s3
+    kind: http
+    files:
+      uplift_train:
+        url: https://sklift.s3.eu-west-2.amazonaws.com/uplift_train.csv.gz
+        md5: 2720bbb659daa9e0989b2777b6a42d19
+      clients:
+        url: https://sklift.s3.eu-west-2.amazonaws.com/clients.csv.gz
+        md5: b9cdeb2806b732771de03e819b3354c5
+      purchases:
+        url: https://sklift.s3.eu-west-2.amazonaws.com/purchases.csv.gz
+        md5: 48d2de13428e24e8b61d66fef02957a8
+
+# Shared GCP settings. They are intentionally unset: Tejas owns provisioning. Environment
+# overrides: X5_GCS_BUCKET, GOOGLE_CLOUD_PROJECT. Credentials come from Application Default
+# Credentials and are never read from this file.
+gcp:
+  project: null             # e.g. <project-id>
+  bucket: null              # bucket name without the gs:// prefix, e.g. <project-id>-x5
+  pubsub_topic: x5-transactions
+
+# Campaign timing. The dataset authors state that purchases.csv holds purchase history
+# "before the SMS campaign" (description.txt in the Hugging Face repository), but no
+# campaign date is published in the dataset files. It is therefore unset; analyses that
+# need a cutoff report "blocked" instead of guessing. Set an ISO date or datetime
+# (e.g. 2019-03-19T00:00:00) only with an authoritative source recorded in `source`.
+campaign:
+  cutoff: null
+  source: null

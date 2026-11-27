@@ -1,0 +1,15 @@
+# Scoped, pinned dependencies for the X5 RetailHero pipeline (download, raw landing, sampling,
+# EDA, replay producer). Python 3.11. This file does not touch the legacy nuPlan requirements.
+#
+#   python3.11 -m venv .venv && . .venv/bin/activate
+#   python -m pip install -r requirements-x5.txt
+#
+# Versions are the ones the code and tests were run with on 2026-11-25.
+# Task-specific extras:  ingestion/requirements-gcs.txt, eda/requirements.txt,
+#                        streaming/producer/requirements.txt (each includes this file).
+
+requests==2.34.2
+PyYAML==6.0.4
+duckdb==2.0.1
+pytest==9.2.0
+ruff==0.17.6
