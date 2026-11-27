@@ -29,13 +29,19 @@ DEFAULT_EDA_CONFIG = Path(__file__).resolve().parents[1] / "configs" / "x5" / "e
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument("--config", default=str(DEFAULT_EDA_CONFIG))
-    parser.add_argument("--mode", choices=MODES, default="sample", help="label of the run: sample or full data")
+    parser.add_argument(
+        "--mode", choices=MODES, default="sample", help="label of the run: sample or full data"
+    )
     parser.add_argument("--input-dir", help="directory with the five <table>.csv(.gz) files")
     parser.add_argument("--output-dir", help="override eda.output_root/<mode>")
     parser.add_argument("--cutoff", help="campaign cutoff (YYYY-MM-DD[ HH:MM:SS]); overrides campaign.cutoff")
-    parser.add_argument("--force", action="store_true", help="rebuild the typed work tables even if unchanged")
+    parser.add_argument(
+        "--force", action="store_true", help="rebuild the typed work tables even if unchanged"
+    )
     parser.add_argument("--no-figures", action="store_true")
     return parser
 
@@ -46,7 +52,12 @@ def main(argv: list[str] | None = None, env: dict[str, str] | None = None) -> in
     try:
         config = load_config(args.config)
         settings = EdaSettings.from_config(
-            config, mode=args.mode, input_dir=args.input_dir, output_dir=args.output_dir, cutoff=args.cutoff, env=env
+            config,
+            mode=args.mode,
+            input_dir=args.input_dir,
+            output_dir=args.output_dir,
+            cutoff=args.cutoff,
+            env=env,
         )
     except ConfigError as exc:
         print(f"configuration error: {exc}", file=sys.stderr)

@@ -45,5 +45,13 @@ extend-exclude = ["third_party"]
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP"]
 
+# X5 pipeline code generates long markdown and SQL strings; line length is not enforced there.
+[tool.ruff.lint.per-file-ignores]
+"eda/**" = ["E501"]
+"ingestion/**" = ["E501"]
+"streaming/**" = ["E501"]
+"tests/x5/**" = ["E501"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]

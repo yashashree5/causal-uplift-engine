@@ -139,7 +139,10 @@ def build_findings(results: Results) -> list[Finding]:
     )
 
     # ---- client attributes
-    bad_low, bad_high = dist["age_outside_valid_range"]["below_min"], dist["age_outside_valid_range"]["above_max"]
+    bad_low, bad_high = (
+        dist["age_outside_valid_range"]["below_min"],
+        dist["age_outside_valid_range"]["above_max"],
+    )
     age = dist["age_all_values"]
     lo, hi = dist["valid_age_range"]
     out.append(
@@ -202,7 +205,10 @@ def build_findings(results: Results) -> list[Finding]:
             "The cause is not documented (possibly collisions of the anonymised ids).",
         )
     )
-    if purchases["rows_beyond_first_per_transaction_product_pair"] or purchases["exact_duplicate_rows_hash_based"]:
+    if (
+        purchases["rows_beyond_first_per_transaction_product_pair"]
+        or purchases["exact_duplicate_rows_hash_based"]
+    ):
         out.append(
             Finding(
                 "A few product rows repeat a (transaction, product) pair.",
@@ -284,7 +290,11 @@ def build_findings(results: Results) -> list[Finding]:
     all_hex = bool((id_table["share_lowercase_hex"] == 1).all())
     id_summary = (
         f"Across the {len(id_table)} ID columns checked, "
-        + ("every distinct value is lowercase hex" if all_hex else "NOT every distinct value is lowercase hex")
+        + (
+            "every distinct value is lowercase hex"
+            if all_hex
+            else "NOT every distinct value is lowercase hex"
+        )
         + f"; value lengths: {', '.join(map(str, lengths))}"
     )
     out.append(
@@ -527,7 +537,9 @@ def render(results: Results, expectations: Mapping[str, Mapping[str, Any]], outp
         "|---:|---|---|---|---|",
     ]
     for i, f in enumerate(findings, 1):
-        lines.append(f"| {i} | {cell(f.observation)} | {cell(f.evidence)} | {cell(f.action)} | {cell(f.caveat)} |")
+        lines.append(
+            f"| {i} | {cell(f.observation)} | {cell(f.evidence)} | {cell(f.action)} | {cell(f.caveat)} |"
+        )
     lines += [
         "",
         "## Key numbers",
@@ -586,8 +598,12 @@ def render(results: Results, expectations: Mapping[str, Mapping[str, Any]], outp
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--outputs", default=DEFAULT_OUTPUTS, help="directory written by run_eda.py (full mode)")
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument(
+        "--outputs", default=DEFAULT_OUTPUTS, help="directory written by run_eda.py (full mode)"
+    )
     parser.add_argument("--output", default=DEFAULT_TARGET, help="Markdown file to write")
     parser.add_argument("--expectations-config", default=DEFAULT_EXPECTATIONS_CONFIG)
     args = parser.parse_args(argv)

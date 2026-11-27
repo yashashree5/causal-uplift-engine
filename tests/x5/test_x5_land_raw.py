@@ -48,7 +48,10 @@ def test_ingest_date_default_and_validation():
     from datetime import date
 
     assert land_raw.resolve_ingest_date(None, {}, today=date(2026, 11, 25)) == "2026-11-25"
-    assert land_raw.resolve_ingest_date("2026-01-02", {"raw_landing": {"ingest_date": "2020-01-01"}}) == "2026-01-02"
+    assert (
+        land_raw.resolve_ingest_date("2026-01-02", {"raw_landing": {"ingest_date": "2020-01-01"}})
+        == "2026-01-02"
+    )
     assert land_raw.resolve_ingest_date(None, {"raw_landing": {"ingest_date": "2020-01-01"}}) == "2020-01-01"
     for bad in ("2026-13-01", "26-1-1", "tomorrow"):
         with pytest.raises(ConfigError):
@@ -64,15 +67,25 @@ def test_bucket_normalisation_and_precedence():
     config = {"gcp": {"bucket": "from-yaml-x5"}}
     assert land_raw.resolve_bucket(None, config, {}) == "from-yaml-x5"
     assert land_raw.resolve_bucket(None, config, {"X5_GCS_BUCKET": "from-env-x5"}) == "from-env-x5"
-    assert land_raw.resolve_bucket("cli-bucket-x5", config, {"X5_GCS_BUCKET": "from-env-x5"}) == "cli-bucket-x5"
-    assert land_raw.resolve_project(None, {"gcp": {"project": "yaml"}}, {"GOOGLE_CLOUD_PROJECT": "env"}) == "env"
+    assert (
+        land_raw.resolve_bucket("cli-bucket-x5", config, {"X5_GCS_BUCKET": "from-env-x5"}) == "cli-bucket-x5"
+    )
+    assert (
+        land_raw.resolve_project(None, {"gcp": {"project": "yaml"}}, {"GOOGLE_CLOUD_PROJECT": "env"}) == "env"
+    )
 
 
 def test_shipped_raw_landing_config_loads():
     config = land_raw.load_config(land_raw.resolve_path("configs/x5/raw_landing.yaml"))
     settings = land_raw.LandingSettings.from_config(config)
     assert settings.object_prefix == "raw/batch"
-    assert set(settings.required_columns) == {"uplift_train", "uplift_test", "clients", "products", "purchases"}
+    assert set(settings.required_columns) == {
+        "uplift_train",
+        "uplift_test",
+        "clients",
+        "products",
+        "purchases",
+    }
     assert settings.expectations["purchases"]["rows"] == 45_800_000  # an expectation, not a measurement
     assert config["gcp"]["bucket"] is None  # not provisioned by this repo
 
@@ -90,7 +103,9 @@ def test_manifest_only_writes_manifests_and_never_touches_cloud(landed_inputs, c
     with mock.patch.object(land_raw, "make_store", side_effect=AssertionError("cloud touched")):
         code = run(config, "--manifest-only")
     assert code == land_raw.EXIT_OK
-    manifest = json.loads((tmp_path / "data/manifests/clients/ingest_date=2026-11-25/manifest.json").read_text())
+    manifest = json.loads(
+        (tmp_path / "data/manifests/clients/ingest_date=2026-11-25/manifest.json").read_text()
+    )
     clients_gz = paths["clients"]
     assert manifest["filename"] == "clients.csv.gz"
     assert manifest["row_count"] == 200
@@ -104,7 +119,9 @@ def test_manifest_only_writes_manifests_and_never_touches_cloud(landed_inputs, c
 
 
 def manifest_row_count(tmp_path, table):
-    return json.loads((tmp_path / f"data/manifests/{table}/ingest_date={DATE}/manifest.json").read_text())["row_count"]
+    return json.loads((tmp_path / f"data/manifests/{table}/ingest_date={DATE}/manifest.json").read_text())[
+        "row_count"
+    ]
 
 
 def test_missing_required_file_fails_validation(landed_inputs, capsys):
@@ -249,8 +266,13 @@ def test_transfer_integrity_failure_is_reported_separately_from_content_md5(land
     failed = [o for o in report["objects"] if o["status"] == "failed"]
     assert failed and failed[0]["transfer_verified"] is False
     # the content MD5 in the manifest is unaffected by the transfer failure
-    manifest = json.loads((tmp_path / f"data/manifests/uplift_train/ingest_date={DATE}/manifest.json").read_text())
-    assert manifest["md5"] == hashlib.md5((tmp_path / "data/downloads/uplift_train.csv.gz").read_bytes()).hexdigest()
+    manifest = json.loads(
+        (tmp_path / f"data/manifests/uplift_train/ingest_date={DATE}/manifest.json").read_text()
+    )
+    assert (
+        manifest["md5"]
+        == hashlib.md5((tmp_path / "data/downloads/uplift_train.csv.gz").read_bytes()).hexdigest()
+    )
 
 
 def test_upload_without_bucket_is_a_clear_cloud_config_error(tmp_path, capsys):
@@ -273,7 +295,9 @@ def test_missing_credentials_is_a_clear_cloud_config_error(landed_inputs, capsys
 def test_local_bucket_dir_rehearsal(landed_inputs, tmp_path):
     root, config, paths = landed_inputs
     assert run(config, "--local-bucket-dir", str(root / "rehearsal")) == land_raw.EXIT_OK
-    assert (root / "rehearsal" / BUCKET / object_names("clients")[0]).read_bytes() == paths["clients"].read_bytes()
+    assert (root / "rehearsal" / BUCKET / object_names("clients")[0]).read_bytes() == paths[
+        "clients"
+    ].read_bytes()
 
 
 # ------------------------------------------------------------------ mocked Cloud Storage client

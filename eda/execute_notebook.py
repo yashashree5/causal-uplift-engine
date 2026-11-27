@@ -64,11 +64,15 @@ def cell_errors(notebook: nbformat.NotebookNode) -> list[dict]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument("--mode", choices=MODES, default="sample")
     parser.add_argument("--input-dir")
     parser.add_argument("--cutoff")
-    parser.add_argument("--output-dir", help="where the notebook writes tables/figures (default eda/outputs/<mode>)")
+    parser.add_argument(
+        "--output-dir", help="where the notebook writes tables/figures (default eda/outputs/<mode>)"
+    )
     parser.add_argument("--timeout", type=int, default=3600, help="seconds per cell")
     parser.add_argument(
         "--in-place",

@@ -56,7 +56,9 @@ class FixtureServer:
                     if route.status_sequence:
                         status = route.status_sequence.pop(0)
                         headers = (
-                            {"Retry-After": route.retry_after} if route.retry_after and status in (429, 503) else {}
+                            {"Retry-After": route.retry_after}
+                            if route.retry_after and status in (429, 503)
+                            else {}
                         )
                         self._reply(status, b"error", headers)
                         return
@@ -82,7 +84,11 @@ class FixtureServer:
                         headers["Content-Range"] = f"bytes {start}-{len(body) - 1}/{len(body)}"
                     payload = body[start:]
                     truncate = False
-                    if route.truncate_first and server._truncations.get(path, 0) < route.truncate_first and not head:
+                    if (
+                        route.truncate_first
+                        and server._truncations.get(path, 0) < route.truncate_first
+                        and not head
+                    ):
                         server._truncations[path] = server._truncations.get(path, 0) + 1
                         truncate = True
                     self.send_response(status)
@@ -108,10 +114,12 @@ class FixtureServer:
                 self.wfile.write(body)
 
         self._httpd = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
-        self._thread = threading.Thread(target=lambda: self._httpd.serve_forever(poll_interval=0.01), daemon=True)
+        self._thread = threading.Thread(
+            target=lambda: self._httpd.serve_forever(poll_interval=0.01), daemon=True
+        )
 
     # ---- lifecycle
-    def start(self) -> "FixtureServer":
+    def start(self) -> FixtureServer:
         self._thread.start()
         return self
 
@@ -125,7 +133,7 @@ class FixtureServer:
         host, port = self._httpd.server_address
         return f"http://{host}:{port}"
 
-    def __enter__(self) -> "FixtureServer":
+    def __enter__(self) -> FixtureServer:
         return self.start()
 
     def __exit__(self, *_exc) -> None:

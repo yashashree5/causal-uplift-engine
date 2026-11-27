@@ -33,9 +33,10 @@ import sys
 import tarfile
 import time
 import zipfile
+from collections.abc import Callable, Mapping
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Callable, Mapping
+from typing import Any
 
 if __package__ in (None, ""):  # allow `python ingestion/download_x5.py`
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -142,7 +143,7 @@ class DownloadSettings:
     extract: bool = False
 
     @classmethod
-    def from_config(cls, config: Mapping[str, Any]) -> "DownloadSettings":
+    def from_config(cls, config: Mapping[str, Any]) -> DownloadSettings:
         section = config.get("download") or {}
         known = {f.name for f in dataclasses.fields(cls)}
         unknown = set(section) - known
@@ -366,7 +367,8 @@ class Downloader:
 
     def _backoff_delay(self, attempt: int, retry_after: float | None) -> float:
         delay = min(
-            self.settings.backoff_initial_s * (self.settings.backoff_factor**attempt), self.settings.backoff_max_s
+            self.settings.backoff_initial_s * (self.settings.backoff_factor**attempt),
+            self.settings.backoff_max_s,
         )
         if retry_after is not None:
             delay = max(delay, min(retry_after, self.settings.backoff_max_s))
@@ -379,7 +381,9 @@ class Downloader:
             headers["Range"] = f"bytes={offset}-"
         timeout = (self.settings.connect_timeout_s, self.settings.read_timeout_s)
         try:
-            resp = self.session.get(cand.url, headers=headers, stream=True, timeout=timeout, allow_redirects=True)
+            resp = self.session.get(
+                cand.url, headers=headers, stream=True, timeout=timeout, allow_redirects=True
+            )
         except (
             requests.exceptions.InvalidURL,
             requests.exceptions.MissingSchema,
@@ -407,7 +411,9 @@ class Downloader:
             mode = "ab"
             if status == 200:
                 if offset:
-                    LOG.info("server ignored the Range request; restarting %s from byte 0", cand.artifact_name)
+                    LOG.info(
+                        "server ignored the Range request; restarting %s from byte 0", cand.artifact_name
+                    )
                 mode = "wb"
                 offset = 0
                 declared_total = _int_or_none(resp.headers.get("Content-Length"))
@@ -416,7 +422,9 @@ class Downloader:
                 start, total = _parse_content_range(content_range)
                 if start != offset:
                     part.unlink(missing_ok=True)
-                    raise TransientSourceError(f"unexpected Content-Range {content_range!r}; discarded partial file")
+                    raise TransientSourceError(
+                        f"unexpected Content-Range {content_range!r}; discarded partial file"
+                    )
                 declared_total = total
 
             part.parent.mkdir(parents=True, exist_ok=True)
@@ -438,7 +446,9 @@ class Downloader:
                 raise PermanentSourceError(f"cannot write {part}: {exc}") from exc
 
             if declared_total is not None and written != declared_total:
-                raise TransientSourceError(f"incomplete transfer: received {written} of {declared_total} bytes")
+                raise TransientSourceError(
+                    f"incomplete transfer: received {written} of {declared_total} bytes"
+                )
 
             return self._response_metadata(resp)
 
@@ -664,7 +674,9 @@ class Downloader:
             except VerificationError:
                 part.unlink(missing_ok=True)
                 if resumed and round_index == 0:
-                    LOG.warning("verification failed after resuming a partial file; retrying once from scratch")
+                    LOG.warning(
+                        "verification failed after resuming a partial file; retrying once from scratch"
+                    )
                     resumed = False
                     continue
                 raise
@@ -715,9 +727,14 @@ class Downloader:
         size = final_path.stat().st_size
         digests = file_digests(final_path, ("md5", "sha256"))
         if record and record.get("sha256") == digests["sha256"] and record.get("bytes") == size:
-            LOG.info("[%s] %s already complete and matches its provenance record; skipping", table, final_path.name)
+            LOG.info(
+                "[%s] %s already complete and matches its provenance record; skipping", table, final_path.name
+            )
             return TableResult(
-                table, "skipped", artifact_path=final_path, source_name=(record.get("source") or {}).get("name")
+                table,
+                "skipped",
+                artifact_path=final_path,
+                source_name=(record.get("source") or {}).get("name"),
             )
         if not record:
             # A file without a provenance record: adopt it only if an independent checksum agrees.
@@ -732,8 +749,12 @@ class Downloader:
                     provenance = self.load_provenance()
                     provenance["artifacts"][table] = new_record
                     self.save_provenance(provenance)
-                    LOG.info("[%s] adopted existing %s (independent checksum matched)", table, final_path.name)
-                    return TableResult(table, "adopted", artifact_path=final_path, source_name=cand.source_name)
+                    LOG.info(
+                        "[%s] adopted existing %s (independent checksum matched)", table, final_path.name
+                    )
+                    return TableResult(
+                        table, "adopted", artifact_path=final_path, source_name=cand.source_name
+                    )
         return TableResult(
             table,
             "failed",
@@ -801,7 +822,9 @@ class Downloader:
         elif compression == "zip":
             with zipfile.ZipFile(artifact) as archive:
                 csv_names = [
-                    i.filename for i in archive.infolist() if not i.is_dir() and i.filename.lower().endswith(".csv")
+                    i.filename
+                    for i in archive.infolist()
+                    if not i.is_dir() and i.filename.lower().endswith(".csv")
                 ]
                 if len(csv_names) != 1:
                     raise DownloadError(
@@ -815,7 +838,9 @@ class Downloader:
                 )
         elif tarfile.is_tarfile(artifact):
             with tarfile.open(artifact) as archive:
-                csv_infos = [i for i in archive.getmembers() if i.isfile() and i.name.lower().endswith(".csv")]
+                csv_infos = [
+                    i for i in archive.getmembers() if i.isfile() and i.name.lower().endswith(".csv")
+                ]
                 if len(csv_infos) != 1:
                     raise DownloadError(
                         f"tar artifact {artifact.name} has {len(csv_infos)} CSV members; expected exactly 1"
@@ -823,7 +848,11 @@ class Downloader:
                 info = csv_infos[0]
                 members.append(
                     self._extract_stream(
-                        artifact, lambda: archive.extractfile(info), Path(info.name).name, record, member=info.name
+                        artifact,
+                        lambda: archive.extractfile(info),
+                        Path(info.name).name,
+                        record,
+                        member=info.name,
                     )
                 )
         else:
@@ -843,12 +872,13 @@ class Downloader:
         safe_name = Path(out_name).name  # never trust archive paths (zip-slip)
         target = self.extracted / safe_name
         previous = next(
-            (m for m in record.get("extracted_members", []) if m.get("path") == _relpath(target, self.root)), None
+            (m for m in record.get("extracted_members", []) if m.get("path") == _relpath(target, self.root)),
+            None,
         )
         if target.exists() and previous and previous.get("source_artifact_sha256") == record["sha256"]:
-            if target.stat().st_size == previous.get("bytes") and file_digests(target, ("md5",))["md5"] == previous.get(
+            if target.stat().st_size == previous.get("bytes") and file_digests(target, ("md5",))[
                 "md5"
-            ):
+            ] == previous.get("md5"):
                 LOG.info("extracted member %s already present and matches provenance; skipping", safe_name)
                 return previous
         part = target.with_name(target.name + ".part")
@@ -896,7 +926,9 @@ class Downloader:
                 try:
                     self.extract_table(table, provenance)
                 except (DownloadError, OSError, zipfile.BadZipFile, tarfile.TarError, EOFError) as exc:
-                    result = TableResult(table, "failed", error=f"extraction failed: {exc}", error_kind="download")
+                    result = TableResult(
+                        table, "failed", error=f"extraction failed: {exc}", error_kind="download"
+                    )
             results.append(result)
         return results
 
@@ -993,7 +1025,11 @@ def _probe(downloader: Downloader, cand: Candidate) -> tuple[str, bool]:
                 size is not None,
             )
         resp = downloader.session.get(
-            cand.url, headers={**cand.headers, "Range": "bytes=0-0"}, stream=True, timeout=timeout, allow_redirects=True
+            cand.url,
+            headers={**cand.headers, "Range": "bytes=0-0"},
+            stream=True,
+            timeout=timeout,
+            allow_redirects=True,
         )
         with resp:
             ok = resp.status_code in (200, 206)
@@ -1010,7 +1046,9 @@ def build_parser() -> argparse.ArgumentParser:
         description="Download the X5 RetailHero uplift dataset with provenance. "
         "Precedence: CLI flag > YAML config > built-in default.",
     )
-    parser.add_argument("--config", default=str(DEFAULT_CONFIG), help="YAML config (default: configs/x5/x5.yaml)")
+    parser.add_argument(
+        "--config", default=str(DEFAULT_CONFIG), help="YAML config (default: configs/x5/x5.yaml)"
+    )
     parser.add_argument("--data-root", help="override paths.data_root")
     parser.add_argument("--tables", help=f"comma-separated subset of: {', '.join(TABLES)}")
     parser.add_argument(
@@ -1018,17 +1056,27 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--dry-run", action="store_true", help="print the plan; download and write nothing")
     parser.add_argument(
-        "--check-remote", action="store_true", help="with --dry-run: probe sources with metadata/range-0 requests only"
+        "--check-remote",
+        action="store_true",
+        help="with --dry-run: probe sources with metadata/range-0 requests only",
     )
-    parser.add_argument("--force", action="store_true", help="replace an existing artifact that fails verification")
+    parser.add_argument(
+        "--force", action="store_true", help="replace an existing artifact that fails verification"
+    )
     extract = parser.add_mutually_exclusive_group()
     extract.add_argument(
-        "--extract", dest="extract", action="store_true", default=None, help="also write extracted CSV members"
+        "--extract",
+        dest="extract",
+        action="store_true",
+        default=None,
+        help="also write extracted CSV members",
     )
     extract.add_argument(
         "--no-extract", dest="extract", action="store_false", help="do not extract (default from config)"
     )
-    parser.add_argument("--no-resume", action="store_true", help="delete leftover .part files instead of resuming them")
+    parser.add_argument(
+        "--no-resume", action="store_true", help="delete leftover .part files instead of resuming them"
+    )
     parser.add_argument("--max-retries", type=int, help="override download.max_retries")
     parser.add_argument("--connect-timeout", type=float, help="override download.connect_timeout_s")
     parser.add_argument("--read-timeout", type=float, help="override download.read_timeout_s")
@@ -1044,7 +1092,9 @@ def main(
 ) -> int:
     args = build_parser().parse_args(argv)
     logging.basicConfig(
-        level=logging.DEBUG if args.verbose else logging.INFO, format="%(levelname)s %(message)s", stream=sys.stderr
+        level=logging.DEBUG if args.verbose else logging.INFO,
+        format="%(levelname)s %(message)s",
+        stream=sys.stderr,
     )
 
     try:
@@ -1054,7 +1104,9 @@ def main(
             tables = tuple(t.strip() for t in args.tables.split(",") if t.strip())
             unknown = [t for t in tables if t not in configured_tables(config)]
             if unknown:
-                raise ConfigError(f"unknown table(s) {unknown}; configured: {list(configured_tables(config))}")
+                raise ConfigError(
+                    f"unknown table(s) {unknown}; configured: {list(configured_tables(config))}"
+                )
         root = data_root(config, args.data_root)
         settings = DownloadSettings.from_config(config)
         if args.no_resume:

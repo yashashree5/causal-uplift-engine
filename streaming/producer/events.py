@@ -22,7 +22,16 @@ from datetime import datetime, timedelta
 from typing import Any
 
 SCHEMA_VERSION = 1
-EVENT_FIELDS = ("event_id", "client_id", "tx_ts", "purchase_sum", "store_id", "items", "points", "schema_version")
+EVENT_FIELDS = (
+    "event_id",
+    "client_id",
+    "tx_ts",
+    "purchase_sum",
+    "store_id",
+    "items",
+    "points",
+    "schema_version",
+)
 ITEM_FIELDS = ("product_id", "quantity", "amount")
 POINTS_FIELDS = ("regular_received", "express_received", "regular_spent", "express_spent")
 POINTS_SIGN_MODES = ("as_source", "absolute")

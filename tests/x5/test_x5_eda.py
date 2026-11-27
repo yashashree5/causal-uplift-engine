@@ -63,7 +63,13 @@ def eda_inputs(tmp_path_factory) -> Path:
         [
             [c[1], "2018-01-01 10:00:00", "2018-02-01 10:00:00", "30", "F"],
             [c[2], "2018-03-01 10:00:00", "", "40", "M"],
-            [c[3], "2018-05-01 10:00:00", "2018-04-01 00:00:00", "-5", "U"],  # redeemed before issued, invalid age
+            [
+                c[3],
+                "2018-05-01 10:00:00",
+                "2018-04-01 00:00:00",
+                "-5",
+                "U",
+            ],  # redeemed before issued, invalid age
             [c[4], "2018-06-01 10:00:00", "", "150", "F"],  # invalid age
             [c[5], "2018-07-01 10:00:00", "", "28", "M"],
             [c6, "2018-08-01 10:00:00", "", "60", "F"],  # test client without purchases
@@ -119,7 +125,8 @@ def eda_inputs(tmp_path_factory) -> Path:
 def make_settings(inputs: Path, out: Path, *, mode="sample", cutoff=None, overrides=None) -> lib.EdaSettings:
     config = load_config(EDA_CONFIG)
     config = deep_merge(
-        config, {"duckdb": {"memory_limit": "1GB", "threads": 2}, "eda": {"min_arm_size": 2, "min_cell_events": 1}}
+        config,
+        {"duckdb": {"memory_limit": "1GB", "threads": 2}, "eda": {"min_arm_size": 2, "min_cell_events": 1}},
     )
     if overrides:
         config = deep_merge(config, overrides)
@@ -178,10 +185,16 @@ def test_settings_precedence_and_validation(eda_inputs, tmp_path):
     env_dir = tmp_path / "env"
     s = lib.EdaSettings.from_config(config, mode="full", env={"X5_EDA_INPUT_DIR": str(env_dir)})
     assert s.input_dir == env_dir and s.mode == "full"
-    s = lib.EdaSettings.from_config(config, mode="full", input_dir=eda_inputs, env={"X5_EDA_INPUT_DIR": str(env_dir)})
+    s = lib.EdaSettings.from_config(
+        config, mode="full", input_dir=eda_inputs, env={"X5_EDA_INPUT_DIR": str(env_dir)}
+    )
     assert s.input_dir == eda_inputs  # CLI/argument beats env
     s = lib.EdaSettings.from_config(config, mode="sample")
-    assert s.input_dir.name == "raw_sample" and s.output_dir.parts[-3:] == ("eda", "outputs", "sample")  # YAML default
+    assert s.input_dir.name == "raw_sample" and s.output_dir.parts[-3:] == (
+        "eda",
+        "outputs",
+        "sample",
+    )  # YAML default
     assert s.cutoff is None and s.alpha == 0.05
     assert lib.EdaSettings.from_config(config, mode="sample", cutoff="2019-03-01").cutoff == "2019-03-01"
     with pytest.raises(ConfigError):
@@ -203,7 +216,8 @@ def test_results_roundtrip_keeps_text_ids_and_turns_nan_into_null(tmp_path):
     res.section("a")["value"] = float("nan")
     res.section("a")["nested"] = {"inf": float("inf"), "n": 3}
     res.add_table(
-        "t", pd.DataFrame({"client_id": ["0001", "0002"], "x": [1.5, float("nan")], "segment": ["010", "020"]})
+        "t",
+        pd.DataFrame({"client_id": ["0001", "0002"], "x": [1.5, float("nan")], "segment": ["010", "020"]}),
     )
     res.write(tmp_path)
     payload = json.loads((tmp_path / "summary.json").read_text())
@@ -248,7 +262,10 @@ def test_file_counts_keys_and_relationships(run):
     assert p["rows_beyond_first_per_transaction_product_pair"] == 1
     r = f["relationships"]
     assert r["purchase_clients_not_in_clients"] == 1 and r["purchase_rows_with_client_not_in_clients"] == 1
-    assert r["purchase_product_ids_not_in_products"] == 1 and r["purchase_rows_with_product_not_in_products"] == 1
+    assert (
+        r["purchase_product_ids_not_in_products"] == 1
+        and r["purchase_rows_with_product_not_in_products"] == 1
+    )
     assert r["products_never_purchased"] == 1  # p4
     assert r["train_test_overlap_clients"] == 0 and r["train_clients_not_in_clients"] == 0
     assert r["clients_in_neither_train_nor_test"] == 0
@@ -263,7 +280,10 @@ def test_cast_failures_name_the_column(run):
 
 def test_timestamps(run):
     t = run[0].sections["timestamps"]
-    assert str(t["purchase_ts_min"]) == "2019-01-15 09:00:00" and str(t["purchase_ts_max"]) == "2019-03-12 10:00:00"
+    assert (
+        str(t["purchase_ts_min"]) == "2019-01-15 09:00:00"
+        and str(t["purchase_ts_max"]) == "2019-03-12 10:00:00"
+    )
     assert t["purchase_ts_null_or_invalid_rows"] == 1 and t["purchase_ts_unparseable_non_null_values"] == 1
     assert t["clients_first_redeem_before_first_issue"] == 1
     assert t["clients_first_redeem_null"] == 4
@@ -284,10 +304,14 @@ def test_leakage_is_blocked_without_cutoff(run):
 
 
 def test_leakage_with_cutoff_counts_rows_and_anchors_recency(eda_inputs, tmp_path):
-    res = lib.run_eda(make_settings(eda_inputs, tmp_path, cutoff="2019-02-15"), figures=False, log=lambda *_: None)
+    res = lib.run_eda(
+        make_settings(eda_inputs, tmp_path, cutoff="2019-02-15"), figures=False, log=lambda *_: None
+    )
     leak = res.sections["leakage"]
     assert leak["status"] == "checked" and leak["cutoff"] == "2019-02-15 00:00:00"
-    assert leak["purchase_rows_at_or_after_cutoff"] == 5  # t3 x2, t_shared x2, t7 (null timestamps never count)
+    assert (
+        leak["purchase_rows_at_or_after_cutoff"] == 5
+    )  # t3 x2, t_shared x2, t7 (null timestamps never count)
     assert leak["transactions_at_or_after_cutoff"] == 4
     assert leak["recency_anchor"] == "2019-02-15 00:00:00" and "cutoff" in leak["recency_anchor_label"]
     assert leak["clients_first_redeem_at_or_after_cutoff"] == 0
@@ -296,7 +320,12 @@ def test_leakage_with_cutoff_counts_rows_and_anchors_recency(eda_inputs, tmp_pat
 def test_treatment_and_overall_uplift(run):
     t = run[0].sections["treatment"]
     o = t["overall"]
-    assert (o["n_treated"], o["conversions_treated"], o["n_control"], o["conversions_control"]) == (3, 2, 2, 1)
+    assert (o["n_treated"], o["conversions_treated"], o["n_control"], o["conversions_control"]) == (
+        3,
+        2,
+        2,
+        1,
+    )
     assert o["uplift"] == pytest.approx(2 / 3 - 1 / 2)
     assert t["treated_share"] == pytest.approx(0.6)
     assert t["rows_with_invalid_treatment_flg"] == 0 and t["rows_with_invalid_target"] == 0
@@ -348,9 +377,13 @@ def test_distributions_and_points_signs(run):
     assert d["transactions_per_client_with_purchases"]["max"] == 2
     assert d["age_outside_valid_range"] == {"below_min": 1, "above_max": 1, "null": 0}
     points = res.tables["points_sign_conventions"].set_index("column")
-    assert points.loc["regular_points_spent", "n_negative"] == 1 and points.loc["regular_points_spent", "min"] == -20.0
     assert (
-        points.loc["regular_points_received", "n_positive"] == 1 and points.loc["regular_points_received", "max"] == 3.0
+        points.loc["regular_points_spent", "n_negative"] == 1
+        and points.loc["regular_points_spent", "min"] == -20.0
+    )
+    assert (
+        points.loc["regular_points_received", "n_positive"] == 1
+        and points.loc["regular_points_received", "max"] == 3.0
     )
     assert res.tables["gender_counts"].set_index("gender")["n_clients"].to_dict() == {"F": 3, "M": 2, "U": 1}
 
@@ -366,11 +399,14 @@ def test_semantics_detects_repeated_purchase_sum_and_shared_ids(run):
     assert all(v == 0 for v in s["multi_row_transactions_where_value_differs_between_rows"].values())
     assert s["transaction_ids_shared_by_more_than_one_client"] == 1
     assert (
-        s["client_transactions_with_shared_transaction_id"] == 2 and s["product_rows_with_shared_transaction_id"] == 2
+        s["client_transactions_with_shared_transaction_id"] == 2
+        and s["product_rows_with_shared_transaction_id"] == 2
     )
     line = s["line_amount_vs_purchase_sum"]
     assert line["sum_iss_equals_purchase_sum"] == 6 and line["sum_iss_plus_red_equals_purchase_sum"] == 7
-    assert line["sum_iss_above_purchase_sum"] == 1 and line["sum_iss_below_purchase_sum"] == 1  # t4 duplicate, t3
+    assert (
+        line["sum_iss_above_purchase_sum"] == 1 and line["sum_iss_below_purchase_sum"] == 1
+    )  # t4 duplicate, t3
     assert s["rows_with_trn_sum_from_red"] == 1 and s["rows_with_nan_or_inf_numeric"] == 0
     assert s["transactions_with_nonpositive_purchase_sum"] == 0
 
@@ -421,7 +457,12 @@ def test_written_tables_keep_leading_zeros(run):
     text = (out / "tables" / "id_formats.csv").read_text()
     assert "client_id" in text
     summary = json.loads((out / "summary.json").read_text())
-    assert set(summary["tables"]) >= {"uplift_by_segment", "null_counts", "cast_failures", "covariate_balance"}
+    assert set(summary["tables"]) >= {
+        "uplift_by_segment",
+        "null_counts",
+        "cast_failures",
+        "covariate_balance",
+    }
     assert (out / "tables" / "uplift_by_segment.csv").read_text().count("\n") > 10
 
 
@@ -469,7 +510,9 @@ def test_results_are_reproducible(eda_inputs, tmp_path):
     a = lib.run_eda(make_settings(eda_inputs, tmp_path / "a"), figures=False, log=lambda *_: None)
     b = lib.run_eda(make_settings(eda_inputs, tmp_path / "b"), figures=False, log=lambda *_: None)
     for name in a.tables:
-        pd.testing.assert_frame_equal(a.tables[name], b.tables[name], check_exact=False, rtol=1e-9, atol=1e-12)
+        pd.testing.assert_frame_equal(
+            a.tables[name], b.tables[name], check_exact=False, rtol=1e-9, atol=1e-12
+        )
     for section in ("files", "treatment", "semantics", "segments", "distributions", "timestamps", "leakage"):
         _assert_same(lib._clean(a.sections[section]), lib._clean(b.sections[section]), section)
 
@@ -515,10 +558,15 @@ def test_cli_exit_codes(eda_inputs, tmp_path, capsys):
     )
     assert ok == run_eda_cli.EXIT_OK and (out / "summary.json").is_file()
     assert (
-        run_eda_cli.main(["--input-dir", str(tmp_path / "missing"), "--output-dir", str(tmp_path / "o")], env={})
+        run_eda_cli.main(
+            ["--input-dir", str(tmp_path / "missing"), "--output-dir", str(tmp_path / "o")], env={}
+        )
         == run_eda_cli.EXIT_FAILED
     )
-    assert run_eda_cli.main(["--cutoff", "tomorrow", "--input-dir", str(eda_inputs)], env={}) == run_eda_cli.EXIT_USAGE
+    assert (
+        run_eda_cli.main(["--cutoff", "tomorrow", "--input-dir", str(eda_inputs)], env={})
+        == run_eda_cli.EXIT_USAGE
+    )
     assert "configuration error" in capsys.readouterr().err
     assert run_eda_cli.main(["--config", str(tmp_path / "no.yaml")], env={}) == run_eda_cli.EXIT_USAGE
 
@@ -526,7 +574,8 @@ def test_cli_exit_codes(eda_inputs, tmp_path, capsys):
 def test_cli_env_input_dir(eda_inputs, tmp_path):
     out = tmp_path / "out"
     code = run_eda_cli.main(
-        ["--mode", "full", "--output-dir", str(out), "--no-figures"], env={"X5_EDA_INPUT_DIR": str(eda_inputs)}
+        ["--mode", "full", "--output-dir", str(out), "--no-figures"],
+        env={"X5_EDA_INPUT_DIR": str(eda_inputs)},
     )
     assert code == 0
     assert json.loads((out / "summary.json").read_text())["sections"]["run"]["mode"] == "full"
@@ -535,10 +584,16 @@ def test_cli_env_input_dir(eda_inputs, tmp_path):
 def test_notebook_is_clean_and_covers_all_sections():
     nb = nbformat.read(NOTEBOOK, as_version=4)
     nbformat.validate(nb)
-    errors = [o for c in nb.cells if c.cell_type == "code" for o in c.get("outputs", []) if o.output_type == "error"]
+    errors = [
+        o for c in nb.cells if c.cell_type == "code" for o in c.get("outputs", []) if o.output_type == "error"
+    ]
     assert not errors, "committed notebook must not contain error outputs"
     headings = [
-        line for c in nb.cells if c.cell_type == "markdown" for line in c.source.splitlines() if line.startswith("## ")
+        line
+        for c in nb.cells
+        if c.cell_type == "markdown"
+        for line in c.source.splitlines()
+        if line.startswith("## ")
     ]
     for number in range(1, 11):
         assert any(h.startswith(f"## {number}. ") for h in headings), f"section {number} missing"
@@ -589,7 +644,11 @@ def test_provenance_summary_links_inputs_to_download_record(eda_inputs, tmp_path
     (root / "downloads" / "download_provenance.json").write_text(json.dumps({"artifacts": artifacts}))
     (root / "extracted").mkdir()
     summary = lib._provenance_summary(root / "extracted", files)
-    assert summary["found"] and summary["revision_resolved"] == ["rev1"] and summary["repo_id_resolved"] == ["org/repo"]
+    assert (
+        summary["found"]
+        and summary["revision_resolved"] == ["rev1"]
+        and summary["repo_id_resolved"] == ["org/repo"]
+    )
     assert all(
         v["input_size_matches_extracted_member"] and not v["input_size_matches_artifact"]
         for v in summary["tables"].values()
