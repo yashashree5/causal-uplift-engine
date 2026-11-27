@@ -35,3 +35,7 @@ warehouse/logs/
 .DS_Store
 .idea/
 .vscode/
+
+# X5 pipeline: local samples and checkpoints are never committed (data/ and *.csv.gz are above).
+/raw_sample/
+/streaming/producer/checkpoints/

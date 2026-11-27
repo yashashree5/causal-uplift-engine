@@ -1,0 +1,14 @@
+# Scoped lint/format settings for the X5 pipeline code (not the legacy nuPlan code).
+# Run from the repository root:
+#   ruff check --config configs/x5/ruff.toml ingestion eda streaming tests/x5
+#   ruff format --config configs/x5/ruff.toml --check ingestion eda streaming tests/x5
+target-version = "py311"
+line-length = 120
+
+[lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+# E501: `ruff format` wraps code; long strings/comments are left to the author.
+ignore = ["E501", "UP007", "UP037", "UP006", "UP035"]
+
+[lint.isort]
+known-first-party = ["ingestion", "streaming", "eda"]

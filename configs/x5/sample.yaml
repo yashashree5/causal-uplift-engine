@@ -1,0 +1,27 @@
+# Reproducible 1% client sample of the X5 tables. Inherits x5.yaml (paths, gcp, ...).
+#
+# Precedence: CLI flag > environment (X5_GCS_BUCKET, GOOGLE_CLOUD_PROJECT) > YAML > default.
+
+extends: x5.yaml
+
+sampling:
+  # Fraction of UNIQUE client_ids to select (not of purchase rows).
+  fraction: 0.01
+  # Project-wide seed from the work plan, used here only as the hash salt. Changing it (or the
+  # fraction) selects a different, equally reproducible sample.
+  seed: 82718
+  # Universe the fraction is applied to: the unique client_id values of this table.
+  universe_table: clients
+  # Local output directory, relative to the repository root (git-ignored).
+  output_dir: raw_sample
+  # Output file compression: gzip (mirrors the raw files) or none.
+  compression: gzip
+  # Object prefix in the bucket for --upload: gs://<bucket>/<object_prefix>/<files>
+  object_prefix: raw_sample
+  upload_chunk_bytes: 8388608
+
+duckdb:
+  memory_limit: 4GB
+  threads: 4
+  # Spill directory for out-of-core operators; null = DuckDB default (next to the process).
+  temp_directory: null
