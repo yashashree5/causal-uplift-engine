@@ -1,0 +1,46 @@
+# Full-data EDA for the X5 RetailHero uplift data. Inherits x5.yaml (paths, campaign, ...).
+#
+# Precedence: CLI flag > environment (X5_EDA_INPUT_DIR for the input directory only) > this YAML > default.
+# Relative paths are resolved against the repository root.
+
+extends: x5.yaml
+
+eda:
+  # Where each mode reads the five CSV tables from (<table>.csv.gz or <table>.csv).
+  #   full   = the downloaded data (use --input-dir data/x5/extracted for plain CSV, which DuckDB reads in parallel)
+  #   sample = the 1% client sample written by ingestion/sample_clients.py
+  input_dirs:
+    full: data/x5/downloads
+    sample: raw_sample
+  # Generated outputs (tables, figures, JSON). Git-ignored. Results go to <output_root>/<mode>/.
+  output_root: eda/outputs
+
+  # Significance level for confidence intervals (two-sided, normal approximation).
+  alpha: 0.05
+  # A segment is flagged "sparse" if either arm has fewer than min_arm_size clients, or if any of the
+  # four treatment x outcome cells has fewer than min_cell_events clients.
+  min_arm_size: 200
+  min_cell_events: 20
+  # Absolute tolerance (currency units) when comparing summed line amounts with purchase_sum.
+  money_tolerance: 0.01
+
+  # Ages outside [valid_age_min, valid_age_max] are treated as invalid in segment analysis only
+  # (the raw values stay untouched and are counted separately).
+  valid_age_min: 16
+  valid_age_max: 100
+
+  # Segment definitions for the uplift-by-segment tables. They use only purchase history and client attributes
+  # (no outcome). The purchase history may extend past the unknown campaign date, see FINDINGS.
+  segments:
+    age_band_edges: [16, 25, 35, 45, 55, 65, 101]      # bands [16,25) ... [65,101)
+    recency_band_edges_days: [0, 15, 30, 60, 90]       # last purchase to anchor; last band is >= 90 days
+    spend_tier_quantiles: [0.25, 0.5, 0.75]            # client total spend, quartiles among train clients with purchases
+
+  # Quantiles reported for every numeric distribution.
+  quantiles: [0.001, 0.01, 0.05, 0.25, 0.5, 0.75, 0.95, 0.99, 0.999]
+
+duckdb:
+  memory_limit: 6GB
+  threads: 6
+  # Spill directory for out-of-core operators; null = <output_dir>/duckdb_tmp.
+  temp_directory: null
